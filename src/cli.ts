@@ -46,6 +46,8 @@ const CLIENT_MATRIX: { id: string; label: string }[] = [
   { id: "claude-desktop", label: "Claude Desktop" },
   { id: "cursor", label: "Cursor" },
   { id: "claude-code", label: "Claude Code" },
+  { id: "cline", label: "Cline (VS Code ext)" },
+  { id: "continue", label: "Continue.dev" },
 ];
 
 const CHECK_CATALOG: { group: string; items: [string, string][] }[] = [
@@ -147,7 +149,7 @@ program
           pc.dim("  No agent configs found on this machine."),
         );
         console.log(
-          pc.dim("  Checked: Claude Desktop · Cursor · Claude Code (MCP + native)."),
+          pc.dim("  Checked: Claude Desktop · Cursor · Claude Code · Cline · Continue (MCP + native)."),
         );
         console.log("");
       }

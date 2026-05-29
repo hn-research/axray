@@ -1,14 +1,21 @@
 /**
- * Top-level config discovery: aggregates all v0.1 clients into a single
- * `ServerSpec[]`, in stable order (claude-desktop, cursor, claude-code).
+ * Top-level MCP-server discovery: aggregates all v0.1 clients into a
+ * single `ServerSpec[]`, in stable order.
  */
 
 import type { ServerSpec } from "../types.js";
 import { discoverClaudeCode } from "./clients/claude-code.js";
 import { discoverClaudeDesktop } from "./clients/claude-desktop.js";
+import { discoverClineServers } from "./clients/cline.js";
+import { discoverContinueServers } from "./clients/continue.js";
 import { discoverCursor } from "./clients/cursor.js";
 
-export type DiscoveryClient = "claude-desktop" | "cursor" | "claude-code";
+export type DiscoveryClient =
+  | "claude-desktop"
+  | "cursor"
+  | "claude-code"
+  | "cline"
+  | "continue";
 
 export interface DiscoveryOptions {
   /** Defaults to all v0.1 clients. */
@@ -21,6 +28,8 @@ const ALL: readonly DiscoveryClient[] = [
   "claude-desktop",
   "cursor",
   "claude-code",
+  "cline",
+  "continue",
 ];
 
 export async function discoverServers(
@@ -40,6 +49,12 @@ export async function discoverServers(
     const ccOpts: { projectRoot?: string } = {};
     if (opts.projectRoot !== undefined) ccOpts.projectRoot = opts.projectRoot;
     out.push(...(await discoverClaudeCode(ccOpts)));
+  }
+  if (want.has("cline")) {
+    out.push(...(await discoverClineServers()));
+  }
+  if (want.has("continue")) {
+    out.push(...(await discoverContinueServers()));
   }
   return out;
 }

@@ -14,6 +14,8 @@ export type SourceClient =
   | "claude-desktop"
   | "cursor"
   | "claude-code"
+  | "cline"
+  | "continue"
   | "committed-repo"
   | (string & {});
 
@@ -113,7 +115,12 @@ export interface ScanResult {
  * MCP block is one input to "what can my agent do"; the client's own
  * permissions, hooks, and trust toggles are the other.
  */
-export type AgentClient = "claude-code" | "cursor" | "claude-desktop";
+export type AgentClient =
+  | "claude-code"
+  | "cursor"
+  | "claude-desktop"
+  | "cline"
+  | "continue";
 export type CapabilityScope = "global" | "project";
 
 export interface HookSpec {
