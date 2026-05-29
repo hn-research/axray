@@ -35,7 +35,7 @@ program
   .description(
     "See what your AI agents can actually do — and find the tools worth trusting.",
   )
-  .version("0.0.0");
+  .version("0.1.0");
 
 interface ScanOpts {
   connect: boolean;
@@ -326,7 +326,7 @@ async function renderDebug(): Promise<void> {
   console.log("");
   console.log(
     pc.dim(
-      "    If any of these look load-bearing, open an issue at github.com/REPLACE/ax-ray.",
+      "    If any of these look load-bearing, open an issue at github.com/REPLACE_BEFORE_PUBLISH/ax-ray.",
     ),
   );
   console.log("");
@@ -464,7 +464,7 @@ function renderCoverage(result: ScanResult): void {
 
   console.log(
     pc.dim(
-      "  Methodology: open at github.com/REPLACE/ax-ray/blob/main/SPEC.md",
+      "  Methodology: open at github.com/REPLACE_BEFORE_PUBLISH/ax-ray/blob/main/SPEC.md",
     ),
   );
   console.log("");

@@ -1,7 +1,7 @@
 {
   "name": "ax-ray",
-  "version": "0.0.0",
-  "description": "See what your AI agents can actually do. Discover trustworthy MCP servers, find the risky ones.",
+  "version": "0.1.0",
+  "description": "See what your AI agents can actually do. Discover trustworthy MCP servers and agent-client surfaces, surface risky ones, and get publisher-grounded remediation.",
   "bin": { "ax-ray": "dist/cli.js" },
   "type": "module",
   "engines": { "node": ">=20" },
@@ -9,12 +9,27 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/cli.ts",
     "lint": "tsc --noEmit",
-    "test": "node --test --import tsx ./tests/*.test.ts"
+    "test": "node --test --import tsx ./tests/*.test.ts",
+    "prepublishOnly": "npm run lint && npm test && npm run build"
   },
-  "keywords": ["mcp", "ai-agents", "security", "trust", "scanner", "agentic"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai-agents",
+    "agentic",
+    "security",
+    "trust",
+    "scanner",
+    "claude",
+    "cursor",
+    "cline",
+    "continue"
+  ],
   "license": "Apache-2.0",
   "author": "Abhishek Goswami",
-  "repository": { "type": "git", "url": "git+https://github.com/REPLACE/ax-ray.git" },
+  "repository": { "type": "git", "url": "git+https://github.com/REPLACE_BEFORE_PUBLISH/ax-ray.git" },
+  "bugs": { "url": "https://github.com/REPLACE_BEFORE_PUBLISH/ax-ray/issues" },
+  "homepage": "https://github.com/REPLACE_BEFORE_PUBLISH/ax-ray#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "boxen": "^8.0.0",
