@@ -1,6 +1,6 @@
 # `ax-ray`
 
-> **See what your AI agents can actually do — and find the MCP servers and clients worth trusting.**
+> **See what your AI agents can actually do. Find the MCP servers and clients worth trusting.**
 
 ```sh
 npx ax-ray
@@ -47,26 +47,26 @@ ax-ray [scan] [options]
 
 ### Flags
 
-| Flag | Default | What it does |
-|---|---|---|
-| `--connect` | `false` | **Deep mode.** Opens each discovered MCP server (stdio via spawn, SSE/HTTP via network), calls `tools/list` only — never `tools/call` — under a 15-second per-server timeout. Enables checks D1, D2, D3, P4 against live tool descriptions and input schemas. |
-| `--json` | `false` | Machine-readable output. Writes the full `ScanResult` JSON to stdout instead of the terminal report. Exit code semantics unchanged. |
-| `--project <path>` | `cwd` | Project root for project-local config walking (`.cursor/mcp.json`, `.mcp.json`, `.claude/settings.json`, `.cursorrules`, `.cursor/rules/*`). |
-| `--no-enrich` | enrich on | Skip npm/registry lookups that feed positive flags P1 (verified repo), P2 (adoption), P3 (pinned + current). Mechanical static checks still fire. |
-| `--demo` | `false` | Use baked-in synthetic data instead of scanning your machine. Pair with `--connect` to also activate the synthetic deep-mode tool surface. Nothing on your machine is read. |
-| `-v`, `--verbose` | `false` | Append a **SCAN COVERAGE** section listing every client looked for (found / not-present) and the catalog of every S / P / C / CC / D check. |
-| `--debug` | `false` | Append a **DEBUG** section listing config-shaped files near our targets that ax-ray did NOT read. Helps spot vendor-added configs we don't yet adapt. Does not recurse into app-state directories. |
-| `--how-to-fix` | `false` | Append a **HOW TO FIX** section: per-finding remediation templates with variables interpolated from real data, plus dynamic **SAFER MODE** hints derived from each server's own `user_config` declaration. |
-| `--version` | — | Print version and exit. |
-| `-h`, `--help` | — | Print help and exit. |
+| Flag               | Default   | What it does                                                                                                                                                                                                                                                  |
+| ------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--connect`        | `false`   | **Deep mode.** Opens each discovered MCP server (stdio via spawn, SSE/HTTP via network), calls `tools/list` only — never `tools/call` — under a 15-second per-server timeout. Enables checks D1, D2, D3, P4 against live tool descriptions and input schemas. |
+| `--json`           | `false`   | Machine-readable output. Writes the full `ScanResult` JSON to stdout instead of the terminal report. Exit code semantics unchanged.                                                                                                                           |
+| `--project <path>` | `cwd`     | Project root for project-local config walking (`.cursor/mcp.json`, `.mcp.json`, `.claude/settings.json`, `.cursorrules`, `.cursor/rules/*`).                                                                                                                  |
+| `--no-enrich`      | enrich on | Skip npm/registry lookups that feed positive flags P1 (verified repo), P2 (adoption), P3 (pinned + current). Mechanical static checks still fire.                                                                                                             |
+| `--demo`           | `false`   | Use baked-in synthetic data instead of scanning your machine. Pair with `--connect` to also activate the synthetic deep-mode tool surface. Nothing on your machine is read.                                                                                   |
+| `-v`, `--verbose`  | `false`   | Append a **SCAN COVERAGE** section listing every client looked for (found / not-present) and the catalog of every S / P / C / CC / D check.                                                                                                                   |
+| `--debug`          | `false`   | Append a **DEBUG** section listing config-shaped files near our targets that ax-ray did NOT read. Helps spot vendor-added configs we don't yet adapt. Does not recurse into app-state directories.                                                            |
+| `--how-to-fix`     | `false`   | Append a **HOW TO FIX** section: per-finding remediation templates with variables interpolated from real data, plus dynamic **SAFER MODE** hints derived from each server's own `user_config` declaration.                                                    |
+| `--version`        | —         | Print version and exit.                                                                                                                                                                                                                                       |
+| `-h`, `--help`     | —         | Print help and exit.                                                                                                                                                                                                                                          |
 
 ### Exit codes
 
-| Code | When |
-|---|---|
-| `0` | No findings above info-level. |
-| `1` | At least one **high** finding (no criticals). |
-| `2` | At least one **critical** finding. |
+| Code | When                                          |
+| ---- | --------------------------------------------- |
+| `0`  | No findings above info-level.                 |
+| `1`  | At least one **high** finding (no criticals). |
+| `2`  | At least one **critical** finding.            |
 
 Suitable for CI gates: `npx ax-ray && <next-step>` blocks downstream on any high+ finding.
 
@@ -117,7 +117,7 @@ Five properties that make `ax-ray` safe to run on a whim:
 
 v0.1, in active construction. The CLI half of an open trust layer for
 MCP and agent clients — the umbrella brand for the upcoming registry /
-insights site is TBD; the scanner stands on its own.
+insights site is TBD; this scanner stands on its own.
 
 ## License
 

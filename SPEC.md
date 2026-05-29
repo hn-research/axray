@@ -4,7 +4,7 @@
 > on its own. The umbrella brand for the upcoming registry / insights
 > site is deferred — picked when the site actually needs a URL.
 > Sibling deliverables (later, sharing this engine): BigQuery indexer +
-> public **insights site** (BuiltWith-style, observational data only).
+> public **insights site**.
 
 ## 0. Tagline & dual surface
 
@@ -18,11 +18,7 @@ The scanner is intentionally **dual-surfaced**:
   it pulls in the much larger audience of devs picking MCP servers, not
   only the security-curious.
 - **Safety / observational surface** — *"what's risky on your machine
-  right now?"* This is the launch hook: visceral, personal, screenshot-bait.
-
-Same scan, same engine, two presentations. The launch GIF is still the
-scary finding (that's what ignites). The positive flags are what spread
-author-to-author (which fear alone cannot do).
+  right now?"*.
 
 ## 1. The trust posture — non-negotiable
 
@@ -33,13 +29,13 @@ report**, and every claim is re-derivable by the user from open sources.
 Trust evidence is **tiered**, and the report says explicitly which tier
 each claim is in:
 
-| Tier | What's known | Requires publisher cooperation? |
-|------|---|---|
-| **0 Unknown** | nothing | n/a |
-| **1 Observed** | npm/PyPI registry data, GitHub presence, observed tool surface (from `tools/list`), config provenance | **No** |
-| **2 Cross-verified** | multiple independent signals agree (npm × GitHub × DNS × observed tool surface); declared capability ≈ observed; no known incident | **No** |
-| **3 Publisher-attested** *(future)* | publisher signs an `mcp-security.json`, identity bound to DNS or GitHub OIDC | **Yes** — long-game upgrade tier |
-| **4 Continuously verified** *(future)* | manifest + observation matched over time, deltas tracked | Yes |
+| Tier                                   | What's known                                                                                                                       | Requires publisher cooperation?  |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **0 Unknown**                          | nothing                                                                                                                            | n/a                              |
+| **1 Observed**                         | npm/PyPI registry data, GitHub presence, observed tool surface (from `tools/list`), config provenance                              | **No**                           |
+| **2 Cross-verified**                   | multiple independent signals agree (npm × GitHub × DNS × observed tool surface); declared capability ≈ observed; no known incident | **No**                           |
+| **3 Publisher-attested** *(future)*    | publisher signs an `mcp-security.json`, identity bound to DNS or GitHub OIDC                                                       | **Yes** — long-game upgrade tier |
+| **4 Continuously verified** *(future)* | manifest + observation matched over time, deltas tracked                                                                           | Yes                              |
 
 **v0.1 of `ax-ray` operates entirely on Tier-1/2.** No publisher
 cooperation is required. The output text reflects the tier honestly —
@@ -112,12 +108,12 @@ function analyze(
 
 ## 3. Config-discovery matrix (v0.1)
 
-| Client | Path (macOS / Linux) | Key |
-|---|---|---|
-| **Claude Desktop** | `~/Library/Application Support/Claude/claude_desktop_config.json` · `~/.config/Claude/…` | `mcpServers` |
-| **Cursor** | `~/.cursor/mcp.json` + `<project>/.cursor/mcp.json` | `mcpServers` |
-| **Claude Code** | `~/.claude.json` + project `.mcp.json` | `mcpServers` |
-| Windsurf · VS Code/Cline · Continue | *(fast-follow)* | varies |
+| Client                              | Path (macOS / Linux)                                                                     | Key          |
+| ----------------------------------- | ---------------------------------------------------------------------------------------- | ------------ |
+| **Claude Desktop**                  | `~/Library/Application Support/Claude/claude_desktop_config.json` · `~/.config/Claude/…` | `mcpServers` |
+| **Cursor**                          | `~/.cursor/mcp.json` + `<project>/.cursor/mcp.json`                                      | `mcpServers` |
+| **Claude Code**                     | `~/.claude.json` + project `.mcp.json`                                                   | `mcpServers` |
+| Windsurf · VS Code/Cline · Continue | *(fast-follow)*                                                                          | varies       |
 
 Windows paths are fast-follow. Each entry normalizes to `ServerSpec`.
 
@@ -139,32 +135,32 @@ Windows paths are fast-follow. Each entry normalizes to `ServerSpec`.
 
 ### Static — `S*` (config + public-metadata only)
 
-| ID | Severity | Detects | How / evidence |
-|---|---|---|---|
-| **S1** | crit/high | Secrets in `env`/`args` | token regexes (`ghp_`, `sk-`, `AKIA…`), DSNs with passwords, high-entropy strings; + **config file world/group-readable** |
-| **S2** | high | Over-broad filesystem root | `server-filesystem` rooted at `$HOME`, `/`, broad paths |
-| **S3** | medium | Dangerous launch | shell wrappers, `docker` with host mounts, arbitrary binaries |
-| **S4** | medium/info | Supply-chain risk | `npx -y` unpinned package, install from raw GitHub URL, no version pin |
-| **S5** | medium | Insecure remote | `http://` (not https), unverifiable host |
-| **S6** | info | No Tier-3 manifest *(future)* | server's domain/repo lacks `/.well-known/mcp-security.json` |
+| ID     | Severity    | Detects                       | How / evidence                                                                                                            |
+| ------ | ----------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **S1** | crit/high   | Secrets in `env`/`args`       | token regexes (`ghp_`, `sk-`, `AKIA…`), DSNs with passwords, high-entropy strings; + **config file world/group-readable** |
+| **S2** | high        | Over-broad filesystem root    | `server-filesystem` rooted at `$HOME`, `/`, broad paths                                                                   |
+| **S3** | medium      | Dangerous launch              | shell wrappers, `docker` with host mounts, arbitrary binaries                                                             |
+| **S4** | medium/info | Supply-chain risk             | `npx -y` unpinned package, install from raw GitHub URL, no version pin                                                    |
+| **S5** | medium      | Insecure remote               | `http://` (not https), unverifiable host                                                                                  |
+| **S6** | info        | No Tier-3 manifest *(future)* | server's domain/repo lacks `/.well-known/mcp-security.json`                                                               |
 
 ### Deep — `D*` (requires `--connect` + `tools/list`)
 
-| ID | Severity | Detects | How / evidence |
-|---|---|---|---|
+| ID     | Severity | Detects                                                       | How / evidence                                                                                                                                                                              |
+| ------ | -------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **D1** | critical | **Tool poisoning** — hidden instructions in tool descriptions | imperative/exfiltration patterns ("read ~/.ssh", "ignore previous", "always then…"), hidden/zero-width unicode, suspicious URLs. *Best-effort in v0.1; the GIF-maker — sharpen post-launch* |
-| **D2** | high | Dangerous capability surface | tool names/schemas implying exec / file-write / delete / network / credential access |
-| **D3** | medium | Over-permissive inputs | arbitrary `command`/`sql`/`path` string with no constraint |
+| **D2** | high     | Dangerous capability surface                                  | tool names/schemas implying exec / file-write / delete / network / credential access                                                                                                        |
+| **D3** | medium   | Over-permissive inputs                                        | arbitrary `command`/`sql`/`path` string with no constraint                                                                                                                                  |
 
 ### Positive flags — `P*` (the dual-framing surface)
 
-| ID | Label | Signal |
-|---|---|---|
-| **P1** | Verified source repo | package metadata → GitHub repo resolves, stars ≥ threshold |
-| **P2** | Broad adoption | npm weekly downloads ≥ threshold (band: small / mid / broad) |
-| **P3** | Pinned & current | version pinned in config and within last N releases |
-| **P4** | Clean tool surface | no `D*` findings against `tools/list` (deep mode only) |
-| **P5** | Scoped install | `server-filesystem` rooted at a project dir, not `$HOME` |
+| ID     | Label                         | Signal                                                           |
+| ------ | ----------------------------- | ---------------------------------------------------------------- |
+| **P1** | Verified source repo          | package metadata → GitHub repo resolves, stars ≥ threshold       |
+| **P2** | Broad adoption                | npm weekly downloads ≥ threshold (band: small / mid / broad)     |
+| **P3** | Pinned & current              | version pinned in config and within last N releases              |
+| **P4** | Clean tool surface            | no `D*` findings against `tools/list` (deep mode only)           |
+| **P5** | Scoped install                | `server-filesystem` rooted at a project dir, not `$HOME`         |
 | **P6** | Manifest published *(future)* | `/.well-known/mcp-security.json` resolves and signature verifies |
 
 P-flags surface in the report's **OK / ATTESTED** band and in `--json` as
