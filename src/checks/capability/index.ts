@@ -14,6 +14,8 @@ import { c3AdditionalDirs } from "./c3-additional-dirs.js";
 import { c4ProjectPermissions } from "./c4-project-permissions.js";
 import { c5ApiKeyHelper } from "./c5-api-key-helper.js";
 import { c6AutoTrustMcp } from "./c6-auto-trust-mcp.js";
+import { cc1RulesContent } from "./cc1-rules-content.js";
+import { cc2InlineApiKey } from "./cc2-inline-api-key.js";
 import { cp1Baseline, cp2OwnerOnly } from "./cp-baseline.js";
 
 const STATIC: CapabilityCheck[] = [
@@ -23,6 +25,8 @@ const STATIC: CapabilityCheck[] = [
   c4ProjectPermissions,
   c5ApiKeyHelper,
   c6AutoTrustMcp,
+  cc1RulesContent,
+  cc2InlineApiKey,
 ];
 
 const POSITIVE: CapabilityPositive[] = [cp1Baseline, cp2OwnerOnly];

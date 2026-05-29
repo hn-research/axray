@@ -26,8 +26,8 @@ export const cp1Baseline: CapabilityPositive = (
     {
       id: "CP1",
       server: capId(cap),
-      label: "baseline clean",
-      detail: "no hooks, no permissive allow patterns, no broad directory grants.",
+      label: "no hooks / no perm grants",
+      detail: "hooks empty, allow list empty, additionalDirectories empty.",
       signal: "hooks=0;allow=0;dirs=0",
     },
   ];

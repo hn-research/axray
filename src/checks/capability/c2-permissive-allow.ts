@@ -57,22 +57,31 @@ export const c2PermissiveAllow: CapabilityCheck = (
 };
 
 function classify(pattern: string): Hit | undefined {
-  // Bash blanket
-  if (pattern === "Bash" || pattern === "Bash(*)" || pattern === "Bash(*:*)") {
+  const p = pattern.trim();
+  // Cursor / shell-glob blankets — single "*", "**", "**/*"
+  if (p === "*" || p === "**" || p === "**/*") {
+    return { pattern, reason: "blanket glob (matches anything)", severity: "high" };
+  }
+  // Cursor bare-binary blankets like "sh", "bash" with no args
+  if (/^(?:sh|bash|zsh|sudo|curl|wget|nc|netcat|ssh|scp)$/i.test(p)) {
+    return { pattern, reason: "blanket shell/escalating binary", severity: "high" };
+  }
+  // Claude-Code style: Bash blanket
+  if (p === "Bash" || p === "Bash(*)" || p === "Bash(*:*)") {
     return { pattern, reason: "blanket shell access", severity: "high" };
   }
-  if (/^Bash\(\s*(?:curl|wget|nc|netcat|ssh|scp|sudo|sh|bash)\b/i.test(pattern)) {
+  if (/^Bash\(\s*(?:curl|wget|nc|netcat|ssh|scp|sudo|sh|bash)\b/i.test(p)) {
     return { pattern, reason: "broad/escalating shell binary", severity: "high" };
   }
   // Read/Write/Edit blankets
-  if (/^(?:Read|Write|Edit|MultiEdit|NotebookEdit)\(\s*\*?\s*\)$/.test(pattern)) {
+  if (/^(?:Read|Write|Edit|MultiEdit|NotebookEdit)\(\s*\*?\s*\)$/.test(p)) {
     return { pattern, reason: "unscoped filesystem surface", severity: "medium" };
   }
-  if (pattern === "Read" || pattern === "Write" || pattern === "Edit") {
+  if (p === "Read" || p === "Write" || p === "Edit") {
     return { pattern, reason: "tool-wide allow with no scope", severity: "medium" };
   }
-  // WebFetch/Bash with broad URL glob
-  if (/^WebFetch\(.*\*/.test(pattern)) {
+  // WebFetch / generic web glob
+  if (/^WebFetch\(.*\*/.test(p)) {
     return { pattern, reason: "broad web egress", severity: "medium" };
   }
   return undefined;

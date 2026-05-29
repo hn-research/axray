@@ -124,6 +124,20 @@ export interface HookSpec {
   timeoutSeconds?: number;
 }
 
+/**
+ * An instruction file the agent will obey (Cursor `.cursorrules`,
+ * `.cursor/rules/*.mdc`; later, similar prompt-like artifacts in other
+ * clients). The content matters because injection lives here.
+ */
+export interface RuleSpec {
+  path: string;
+  scope: CapabilityScope;
+  bytes: number;
+  perms?: string;
+  /** Full content for scanning. We only read text files. */
+  content: string;
+}
+
 export interface ClientCapability {
   client: AgentClient;
   scope: CapabilityScope;
@@ -136,10 +150,19 @@ export interface ClientCapability {
     deny: string[];
     additionalDirectories: string[];
   };
+  /**
+   * Which dialect the allow/deny patterns use. Affects how a permissive
+   * check interprets a pattern. Defaults differ per client:
+   *   "claude-code" → "Bash(npm:*)" form
+   *   "cursor"      → shell-glob form ("npm run *", "*")
+   */
+  permissionsDialect?: AgentClient;
   apiKeyHelper?: string;
   enableAllProjectMcpServers?: boolean;
   enabledMcpjsonServers: string[];
   disabledMcpjsonServers: string[];
+  /** Instruction files the agent obeys. Inspected for prompt injection. */
+  rules?: RuleSpec[];
   extras: Record<string, unknown>;
 }
 
