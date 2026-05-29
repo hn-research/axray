@@ -49,6 +49,11 @@ export interface ServerSpec {
    */
   scope?: string;
   packageHints?: PackageHints;
+  /**
+   * When set, identifies the source that has blocklisted this server
+   * (e.g. Anthropic's DXT extensions-blocklist.json). Triggers S7.
+   */
+  blocklistedBy?: { source: string; ref?: string };
 }
 
 export interface ToolInfo {

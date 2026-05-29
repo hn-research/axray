@@ -75,6 +75,16 @@ export const KNOWN_PATHS: KnownPath[] = [
   },
   {
     client: "claude-desktop",
+    label: "DXT blocklist",
+    feeds: "extensions",
+    kind: "file",
+    resolve: () => {
+      const base = macOsAppSupport("Claude")();
+      return base ? join(base, "extensions-blocklist.json") : undefined;
+    },
+  },
+  {
+    client: "claude-desktop",
     label: "DXT extensions directory",
     feeds: "extensions",
     kind: "directory",

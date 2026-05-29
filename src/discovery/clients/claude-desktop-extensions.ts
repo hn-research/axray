@@ -93,6 +93,7 @@ export async function discoverClaudeDesktopExtensions(): Promise<ClaudeDesktopEx
 
   const extensionsDir = join(supportDir, "Claude Extensions");
   const settingsDir = join(supportDir, "Claude Extensions Settings");
+  const blocklist = await loadBlocklist(join(supportDir, "extensions-blocklist.json"));
 
   const servers: ServerSpec[] = [];
   const manifestTools = new Map<string, ToolInfo[]>();
@@ -136,6 +137,10 @@ export async function discoverClaudeDesktopExtensions(): Promise<ClaudeDesktopEx
     };
     if (env) spec.env = env;
     if (repoUrl) spec.packageHints = { repo: repoUrl };
+    if (blocklist.ids.has(id)) {
+      spec.blocklistedBy = { source: "Anthropic DXT blocklist" };
+      if (blocklist.ref !== undefined) spec.blocklistedBy.ref = blocklist.ref;
+    }
 
     servers.push(spec);
     dxtIds.add(id);
@@ -170,4 +175,37 @@ function resolveTemplate(value: string, dirname: string): string {
     .replace(/\$\{__dirname\}/g, dirname)
     .replace(/\$\{HOME\}/g, process.env["HOME"] ?? "");
   // `${user_config.*}` deliberately left literal — see file header.
+}
+
+/**
+ * Anthropic ships a DXT blocklist alongside the installations registry.
+ * File shape: an array of `{ entries: string[], lastUpdated, url }`.
+ * We aggregate all `entries[]` into a single id-set; any installed
+ * extension whose id appears in the set is flagged by S7.
+ */
+async function loadBlocklist(
+  path: string,
+): Promise<{ ids: Set<string>; ref?: string }> {
+  const ids = new Set<string>();
+  const loaded = await readJsonIfExists(path);
+  if (!loaded || !Array.isArray(loaded.data)) return { ids };
+  let ref: string | undefined;
+  for (const block of loaded.data as unknown[]) {
+    if (typeof block !== "object" || block === null) continue;
+    const b = block as { entries?: unknown; url?: unknown };
+    if (Array.isArray(b.entries)) {
+      for (const e of b.entries) {
+        if (typeof e === "string") ids.add(e);
+        else if (
+          typeof e === "object" &&
+          e !== null &&
+          typeof (e as { id?: unknown }).id === "string"
+        ) {
+          ids.add((e as { id: string }).id);
+        }
+      }
+    }
+    if (typeof b.url === "string" && !ref) ref = b.url;
+  }
+  return ref !== undefined ? { ids, ref } : { ids };
 }

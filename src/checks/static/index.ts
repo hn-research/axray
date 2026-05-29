@@ -6,6 +6,7 @@ import { s3DangerousLaunch } from "./s3-dangerous-launch.js";
 import { s4SupplyChain } from "./s4-supply-chain.js";
 import { s5InsecureRemote } from "./s5-insecure-remote.js";
 import { s6NoManifest } from "./s6-no-manifest.js";
+import { s7Blocklisted } from "./s7-blocklisted.js";
 
 const ALL: StaticCheck[] = [
   s1Secrets,
@@ -14,6 +15,7 @@ const ALL: StaticCheck[] = [
   s4SupplyChain,
   s5InsecureRemote,
   s6NoManifest,
+  s7Blocklisted,
 ];
 
 export function runStaticChecks(
@@ -32,4 +34,5 @@ export {
   s4SupplyChain,
   s5InsecureRemote,
   s6NoManifest,
+  s7Blocklisted,
 };

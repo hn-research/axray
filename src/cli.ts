@@ -64,6 +64,7 @@ const CHECK_CATALOG: { group: string; items: [string, string][] }[] = [
       ["S4", "supply-chain risk (unpinned / non-registry source)"],
       ["S5", "insecure remote (plaintext http · raw IP)"],
       ["S6", "publisher security manifest absent"],
+      ["S7", "installed extension is on the vendor blocklist"],
     ],
   },
   {
