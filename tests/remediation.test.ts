@@ -60,7 +60,7 @@ describe("findSaferModeHints", () => {
 describe("buildRemediation", () => {
   it("returns expanded template for a D3 finding with interpolated server", () => {
     const r = buildRemediation(
-      finding("D3", "medium", { subject: "shell_exec" }),
+      finding("D3", "medium", { server: "wide-open", subject: "shell_exec" }),
       srv({ name: "wide-open" }),
     );
     assert.ok(r);
