@@ -1,30 +1,25 @@
-# VHS cassette — the ax-ray launch GIF.
+# VHS cassette — ax-ray launch GIF.
+#
+# Uses `less -R` so the terminal stays at a normal readable size and the
+# report scrolls page-by-page (Space). Color escapes preserved (-R);
+# prompt string suppressed (-P "") for a clean bottom row.
 #
 # Usage:
 #   brew install vhs
-#   npm run build                 # ensures dist/ exists for the local alias
-#   vhs cassette.tape             # produces launch.gif (and launch.mp4) at the repo root
-#
-# Three-act tour of the synthetic demo surface:
-#   1. ax-ray --demo                     (default static report)
-#   2. ax-ray --demo --connect           (same, plus live deep-mode findings)
-#   3. ax-ray --demo --connect --how-to-fix
-#                                        (same, plus per-finding remediation
-#                                         including publisher-declared safer-mode hints)
-# No real machine state is touched (synthetic demo path).
+#   npm run build                   # ensures dist/ exists for the local alias
+#   vhs cassette.tape               # produces launch.gif + launch.mp4
 
 Output launch.gif
 Output launch.mp4
 
-Set FontSize 13
-Set Width 1500
-Set Height 2200
+Set FontSize 18
+Set Width 1300
+Set Height 900
 Set Padding 28
 Set Theme "Catppuccin Mocha"
-Set TypingSpeed 30ms
+Set TypingSpeed 35ms
 
-# Hidden setup: alias `ax-ray` to the local built binary so the command
-# on screen reads cleanly without `npx`.
+# Hidden setup: alias the local built binary so the typed command stays clean.
 Hide
 Type 'alias ax-ray="node ./dist/cli.js"'
 Enter
@@ -34,28 +29,31 @@ Enter
 Sleep 300ms
 Show
 
-# ── Act 1 — default static report ───────────────────────────────
-Type "ax-ray --demo"
+# Single command: pipe the full deep + remediation report through less
+# so the viewer sees the top of the output first, then pages down.
+Type 'ax-ray --demo --connect --how-to-fix | less -R -P ""'
 Sleep 500ms
 Enter
-Sleep 11s
 
-Type "clear"
-Enter
-Sleep 400ms
+# Page 1 — header, AGENT CLIENTS, OK / ATTESTED, top of severity blocks
+Sleep 6s
+Space
 
-# ── Act 2 — deep mode (--connect) adds D1/D2/D3 + P4 ────────────
-Type "ax-ray --demo --connect"
+# Page 2 — more findings
+Sleep 5s
+Space
+
+# Page 3 — INFO findings tail / top of HOW TO FIX
+Sleep 5s
+Space
+
+# Page 4 — HOW TO FIX detail (safer-mode hints, etc.)
+Sleep 6s
+Space
+
+# Page 5 — tail of HOW TO FIX
+Sleep 5s
+
+# Quit less
+Type "q"
 Sleep 500ms
-Enter
-Sleep 13s
-
-Type "clear"
-Enter
-Sleep 400ms
-
-# ── Act 3 — expanded remediation with publisher safer-mode hints ─
-Type "ax-ray --demo --connect --how-to-fix"
-Sleep 500ms
-Enter
-Sleep 17s
