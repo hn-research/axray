@@ -15,6 +15,7 @@ import { discoverServers } from "./discovery/index.js";
 import { discoverCapabilities } from "./discovery/capabilities.js";
 import { fetchEnrichments } from "./enrichments/index.js";
 import { analyze } from "./engine/index.js";
+import { getDemoInputs } from "./demo.js";
 import type {
   CapabilityTrust,
   Finding,
@@ -37,6 +38,7 @@ interface ScanOpts {
   json: boolean;
   project?: string;
   enrich?: boolean;
+  demo: boolean;
 }
 
 program
@@ -51,7 +53,26 @@ program
     "project root for project-local configs (default: cwd)",
   )
   .option("--no-enrich", "skip npm/registry enrichments")
+  .option("--demo", "run against a baked-in synthetic surface — no install, no network, no setup", false)
   .action(async (opts: ScanOpts) => {
+    if (opts.demo) {
+      const demo = getDemoInputs();
+      const result = analyze(demo.servers, undefined, {
+        enrichments: demo.enrichments,
+        capabilities: demo.capabilities,
+      });
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+        process.exit(exitCodeFor(result));
+      }
+      console.log("");
+      console.log(
+        pc.dim("  [demo mode] · synthetic data; nothing on your machine was scanned."),
+      );
+      renderTerminal(result);
+      process.exit(exitCodeFor(result));
+    }
+
     const discoverOpts: { projectRoot?: string } = {};
     if (opts.project !== undefined) discoverOpts.projectRoot = opts.project;
     const [servers, capabilities] = await Promise.all([
