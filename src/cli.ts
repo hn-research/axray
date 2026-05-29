@@ -130,6 +130,7 @@ program
       const result = analyze(demo.servers, toolsByServer, {
         enrichments: demo.enrichments,
         capabilities: demo.capabilities,
+        mode: opts.connect ? "deep" : "static",
       });
       if (opts.json) {
         process.stdout.write(JSON.stringify(result, null, 2) + "\n");
@@ -210,7 +211,8 @@ program
     const analyzeOpts: {
       enrichments?: typeof enrichments;
       capabilities: typeof capabilities;
-    } = { capabilities };
+      mode: "static" | "deep";
+    } = { capabilities, mode: opts.connect ? "deep" : "static" };
     if (enrichments) analyzeOpts.enrichments = enrichments;
     const result = analyze(servers, toolsByServer, analyzeOpts);
 

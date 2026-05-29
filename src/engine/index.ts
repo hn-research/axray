@@ -43,6 +43,13 @@ import { computeSummary, toGrade } from "./scoring.js";
 export interface AnalyzeOptions {
   enrichments?: Enrichments;
   capabilities?: ClientCapability[];
+  /**
+   * Reflects what the user opted into, NOT whether D-checks ran. If a
+   * server's tools are available statically (e.g. DXT manifest), the
+   * deep checks still fire — but the report label stays "static"
+   * unless the caller actually performed live introspection.
+   */
+  mode?: "static" | "deep";
 }
 
 export function analyze(
@@ -50,7 +57,7 @@ export function analyze(
   toolsByServer?: Map<string, ToolInfo[]>,
   options: AnalyzeOptions = {},
 ): ScanResult {
-  const mode = toolsByServer ? "deep" : "static";
+  const mode = options.mode ?? "static";
   const ctx = options.enrichments
     ? { enrichments: options.enrichments }
     : {};
