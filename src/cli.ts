@@ -14,6 +14,7 @@ import pc from "picocolors";
 import { discoverServers, discoverManifestTools } from "./discovery/index.js";
 import { discoverCapabilities } from "./discovery/capabilities.js";
 import { listUnknownConfigsNearKnownTargets } from "./discovery/unknown-configs.js";
+import { buildRemediation } from "./remediation/index.js";
 import { fetchEnrichments } from "./enrichments/index.js";
 import { analyze } from "./engine/index.js";
 import { getDemoInputs } from "./demo.js";
@@ -44,6 +45,7 @@ interface ScanOpts {
   demo: boolean;
   verbose: boolean;
   debug: boolean;
+  howToFix: boolean;
 }
 
 const CLIENT_MATRIX: { id: string; label: string }[] = [
@@ -123,6 +125,7 @@ program
   .option("--demo", "run against a baked-in synthetic surface — no install, no network, no setup", false)
   .option("-v, --verbose", "append a SCAN COVERAGE section showing what was looked at", false)
   .option("--debug", "additionally list config-shaped files near our targets that ax-ray did NOT read (helps spot vendor-added configs)", false)
+  .option("--how-to-fix", "append expanded, per-finding remediation including safer-mode hints derived from each server's user_config", false)
   .action(async (opts: ScanOpts) => {
     if (opts.demo) {
       const demo = getDemoInputs();
@@ -143,6 +146,7 @@ program
         ),
       );
       renderTerminal(result);
+      if (opts.howToFix) renderHowToFix(result, demo.servers);
       if (opts.verbose) renderCoverage(result);
       if (opts.debug) await renderDebug();
       process.exit(exitCodeFor(result));
@@ -230,10 +234,77 @@ program
     }
 
     renderTerminal(result);
+    if (opts.howToFix) renderHowToFix(result, servers);
     if (opts.verbose) renderCoverage(result);
     if (opts.debug) await renderDebug();
     process.exit(exitCodeFor(result));
   });
+
+function renderHowToFix(
+  result: ScanResult,
+  servers: ScanResult["servers"],
+): void {
+  // Aggregate findings across both subject kinds.
+  const items: { subject: string; finding: Finding }[] = [
+    ...result.trust.flatMap((t) =>
+      t.findings.map((f) => ({ subject: t.server, finding: f })),
+    ),
+    ...result.capabilityTrust.flatMap((c) =>
+      c.findings.map((f) => ({
+        subject: `${c.client}:${c.scope}`,
+        finding: f,
+      })),
+    ),
+  ];
+  // Skip info-only — they don't need remediation, they're notes.
+  const actionable = items.filter((i) => i.finding.severity !== "info");
+  if (actionable.length === 0) return;
+
+  // Sort by severity (worst first); within severity preserve order.
+  const order: Record<Finding["severity"], number> = {
+    critical: 0,
+    high: 1,
+    medium: 2,
+    low: 3,
+    info: 4,
+  };
+  actionable.sort((a, b) => order[a.finding.severity] - order[b.finding.severity]);
+
+  console.log("  " + pc.dim("─".repeat(60)));
+  console.log("  " + pc.bold("HOW TO FIX") + pc.dim("    per-finding remediation, ranked by severity"));
+  console.log("");
+
+  const serversByName = new Map(servers.map((s) => [s.name, s]));
+
+  for (const { subject, finding } of actionable) {
+    const server = serversByName.get(finding.server);
+    const rem = buildRemediation(finding, server);
+    const sevLabel = sevHeader(finding.severity);
+    console.log(
+      `  ${sevLabel}  ${pc.bold(subject)}${finding.subject ? pc.dim(" › ") + finding.subject : ""}  ${pc.dim(`[${finding.id}]`)}`,
+    );
+    if (!rem) {
+      console.log(`      ${pc.dim(finding.remediation)}`);
+      console.log("");
+      continue;
+    }
+    for (const line of rem.fix.split("\n")) {
+      console.log(`      ${line.length > 0 ? line : ""}`);
+    }
+    if (rem.saferMode.length > 0) {
+      console.log("");
+      console.log(`      ${pc.bold("SAFER MODE")}  ${pc.dim("publisher-declared knobs you could enable:")}`);
+      for (const h of rem.saferMode) {
+        console.log(`        ${pc.green("•")} ${pc.bold(h.key)}  ${pc.dim(h.reason)}`);
+      }
+    }
+    if (rem.verify) {
+      console.log("");
+      console.log(`      ${pc.dim("verify:")} ${pc.dim(rem.verify)}`);
+    }
+    console.log("");
+  }
+}
 
 async function renderDebug(): Promise<void> {
   const unknown = await listUnknownConfigsNearKnownTargets();

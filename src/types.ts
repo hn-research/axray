@@ -54,6 +54,12 @@ export interface ServerSpec {
    * (e.g. Anthropic's DXT extensions-blocklist.json). Triggers S7.
    */
   blocklistedBy?: { source: string; ref?: string };
+  /**
+   * Names of publisher-declared user-configurable knobs (e.g. DXT
+   * extensions' `user_config` block). Used by the remediation layer
+   * to surface safer-mode knobs the user hasn't enabled.
+   */
+  userConfigKeys?: string[];
 }
 
 export interface ToolInfo {

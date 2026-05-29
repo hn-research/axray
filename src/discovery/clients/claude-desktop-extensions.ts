@@ -141,6 +141,10 @@ export async function discoverClaudeDesktopExtensions(): Promise<ClaudeDesktopEx
       spec.blocklistedBy = { source: "Anthropic DXT blocklist" };
       if (blocklist.ref !== undefined) spec.blocklistedBy.ref = blocklist.ref;
     }
+    if (m.user_config && typeof m.user_config === "object") {
+      const keys = Object.keys(m.user_config);
+      if (keys.length > 0) spec.userConfigKeys = keys;
+    }
 
     servers.push(spec);
     dxtIds.add(id);
