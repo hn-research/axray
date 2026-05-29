@@ -13,6 +13,16 @@ import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { KNOWN_PATHS, knownConfigParentDirs } from "./path-map.js";
 
+/**
+ * Directories whose entire contents are consumed by an adapter, even
+ * though the path map only lists the directory (not each file inside).
+ * Files inside any of these are excluded from the "unknown" list.
+ */
+const CONSUMED_DIR_SUFFIXES = [
+  "/Claude Extensions Settings",
+  "/.continue/rules",
+];
+
 export interface UnknownConfigEntry {
   path: string;
   bytes: number;
@@ -30,6 +40,7 @@ export async function listUnknownConfigsNearKnownTargets(): Promise<
 
   const out: UnknownConfigEntry[] = [];
   for (const dir of knownConfigParentDirs()) {
+    if (CONSUMED_DIR_SUFFIXES.some((s) => dir.endsWith(s))) continue;
     let entries: string[] = [];
     try {
       entries = await readdir(dir);
