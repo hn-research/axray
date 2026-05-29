@@ -19,11 +19,12 @@
 import type { Finding, ServerSpec, ToolInfo } from "../../types.js";
 import type { DeepCheck } from "./types.js";
 
-type Bucket = "exec" | "fs-write" | "network" | "credential";
+type Bucket = "exec" | "fs-write" | "destructive" | "network" | "credential";
 
 const PATTERNS: { bucket: Bucket; regex: RegExp }[] = [
   { bucket: "exec", regex: /\b(?:exec|shell|run[_-]?command|run[_-]?cmd|spawn|eval|script|sudo|kill|terminate)\b/i },
-  { bucket: "fs-write", regex: /\b(?:write|delete|remove|rm|mv|move|unlink|drop[_-]?table|truncate|chmod|chown)[_-]?(?:file|dir|directory|table)?\b/i },
+  { bucket: "fs-write", regex: /\b(?:write|edit|mv|move|chmod|chown|unlink)[_-]?(?:file|dir|directory)?\b/i },
+  { bucket: "destructive", regex: /\b(?:delete|destroy|remove|rm|drop[_-]?table|truncate|wipe|purge)[_-]?\w*\b/i },
   { bucket: "network", regex: /\b(?:fetch|request|http_?(?:get|post|put|delete)|curl|wget|webhook|send_?(?:mail|message)|post)\b/i },
   { bucket: "credential", regex: /\b(?:secret|password|token|api[_-]?key|credential|signin|keyring|keychain)\b/i },
 ];
@@ -50,7 +51,7 @@ export const d2DangerousCapabilities: DeepCheck = (
     byBucket.has("exec") || byBucket.has("credential") ? "high" : "medium";
 
   const evidence: string[] = [];
-  for (const b of ["exec", "fs-write", "network", "credential"] as Bucket[]) {
+  for (const b of ["exec", "destructive", "fs-write", "network", "credential"] as Bucket[]) {
     const list = byBucket.get(b);
     if (!list || list.length === 0) continue;
     evidence.push(`${b}: ${list.join(", ")}`);

@@ -11,7 +11,7 @@
 
 import { Command } from "commander";
 import pc from "picocolors";
-import { discoverServers } from "./discovery/index.js";
+import { discoverServers, discoverManifestTools } from "./discovery/index.js";
 import { discoverCapabilities } from "./discovery/capabilities.js";
 import { fetchEnrichments } from "./enrichments/index.js";
 import { analyze } from "./engine/index.js";
@@ -72,6 +72,7 @@ const CHECK_CATALOG: { group: string; items: [string, string][] }[] = [
       ["P3", "version pinned in launch command + current"],
       ["P4", "clean tool surface (deep mode — no D1/D2/D3 hits)"],
       ["P5", "filesystem scope narrow (not $HOME / system root)"],
+      ["P7", "Claude Desktop DXT directory-installed (hash-recorded, blocklist-checked)"],
     ],
   },
   {
@@ -143,9 +144,10 @@ program
 
     const discoverOpts: { projectRoot?: string } = {};
     if (opts.project !== undefined) discoverOpts.projectRoot = opts.project;
-    const [servers, capabilities] = await Promise.all([
+    const [servers, capabilities, manifestTools] = await Promise.all([
       discoverServers(discoverOpts),
       discoverCapabilities(discoverOpts),
+      discoverManifestTools(),
     ]);
 
     if (servers.length === 0 && capabilities.length === 0) {
@@ -174,7 +176,10 @@ program
       ? await fetchEnrichments(servers)
       : undefined;
 
-    let toolsByServer: Map<string, ToolInfo[]> | undefined;
+    // Start with statically-declared tools (DXT manifests). Live
+    // introspection from --connect overrides per-server on merge.
+    let toolsByServer: Map<string, ToolInfo[]> | undefined =
+      manifestTools.size > 0 ? new Map(manifestTools) : undefined;
     let introspectFailures: Map<string, string> | undefined;
     if (opts.connect && servers.length > 0) {
       const stdioCount = servers.filter((s) => s.transport === "stdio").length;
@@ -192,7 +197,8 @@ program
         timeoutMs: 15_000,
         concurrency: 4,
       });
-      toolsByServer = introspect.toolsByServer;
+      if (!toolsByServer) toolsByServer = new Map();
+      for (const [k, v] of introspect.toolsByServer) toolsByServer.set(k, v);
       if (introspect.failures.size > 0) introspectFailures = introspect.failures;
     }
 

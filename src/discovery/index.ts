@@ -3,9 +3,13 @@
  * single `ServerSpec[]`, in stable order.
  */
 
-import type { ServerSpec } from "../types.js";
+import type { ServerSpec, ToolInfo } from "../types.js";
 import { discoverClaudeCode } from "./clients/claude-code.js";
-import { discoverClaudeDesktop } from "./clients/claude-desktop.js";
+import {
+  discoverClaudeDesktop,
+  discoverClaudeDesktopDxtIndex,
+  discoverClaudeDesktopManifestTools,
+} from "./clients/claude-desktop.js";
 import { discoverClineServers } from "./clients/cline.js";
 import { discoverContinueServers } from "./clients/continue.js";
 import { discoverCursor } from "./clients/cursor.js";
@@ -57,4 +61,22 @@ export async function discoverServers(
     out.push(...(await discoverContinueServers()));
   }
   return out;
+}
+
+/**
+ * Tools that callers declare statically inside their config/manifest.
+ * Today only Claude Desktop DXT extensions contribute (their manifests
+ * carry a `tools` array). Used as a non-`--connect` input to the deep
+ * checks — live introspection still wins on merge if `--connect` is
+ * set on the same server.
+ */
+export async function discoverManifestTools(): Promise<
+  Map<string, ToolInfo[]>
+> {
+  return discoverClaudeDesktopManifestTools();
+}
+
+/** Set of server names known to come from Anthropic's DXT directory. */
+export async function discoverDxtServerNames(): Promise<Set<string>> {
+  return discoverClaudeDesktopDxtIndex();
 }
