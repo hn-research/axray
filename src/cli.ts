@@ -13,6 +13,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import { discoverServers, discoverManifestTools } from "./discovery/index.js";
 import { discoverCapabilities } from "./discovery/capabilities.js";
+import { listUnknownConfigsNearKnownTargets } from "./discovery/unknown-configs.js";
 import { fetchEnrichments } from "./enrichments/index.js";
 import { analyze } from "./engine/index.js";
 import { getDemoInputs } from "./demo.js";
@@ -42,6 +43,7 @@ interface ScanOpts {
   enrich?: boolean;
   demo: boolean;
   verbose: boolean;
+  debug: boolean;
 }
 
 const CLIENT_MATRIX: { id: string; label: string }[] = [
@@ -119,6 +121,7 @@ program
   .option("--no-enrich", "skip npm/registry enrichments")
   .option("--demo", "run against a baked-in synthetic surface — no install, no network, no setup", false)
   .option("-v, --verbose", "append a SCAN COVERAGE section showing what was looked at", false)
+  .option("--debug", "additionally list config-shaped files near our targets that ax-ray did NOT read (helps spot vendor-added configs)", false)
   .action(async (opts: ScanOpts) => {
     if (opts.demo) {
       const demo = getDemoInputs();
@@ -139,6 +142,7 @@ program
       );
       renderTerminal(result);
       if (opts.verbose) renderCoverage(result);
+      if (opts.debug) await renderDebug();
       process.exit(exitCodeFor(result));
     }
 
@@ -224,8 +228,35 @@ program
 
     renderTerminal(result);
     if (opts.verbose) renderCoverage(result);
+    if (opts.debug) await renderDebug();
     process.exit(exitCodeFor(result));
   });
+
+async function renderDebug(): Promise<void> {
+  const unknown = await listUnknownConfigsNearKnownTargets();
+  console.log("  " + pc.dim("─".repeat(60)));
+  console.log(
+    "  " + pc.bold("DEBUG") +
+      pc.dim("    config-shaped files near our targets we did NOT read"),
+  );
+  console.log("");
+  if (unknown.length === 0) {
+    console.log(pc.dim("    (none — every JSON/YAML near a known config is parsed by an adapter)"));
+    console.log("");
+    return;
+  }
+  for (const u of unknown) {
+    const sizeKb = (u.bytes / 1024).toFixed(1);
+    console.log(`    ${pc.dim("·")} ${pc.dim(u.path)}  ${pc.dim(`(${sizeKb} KB · mtime ${u.modifiedAt.slice(0, 10)})`)}`);
+  }
+  console.log("");
+  console.log(
+    pc.dim(
+      "    If any of these look load-bearing, open an issue at github.com/REPLACE/ax-ray.",
+    ),
+  );
+  console.log("");
+}
 
 function exitCodeFor(r: ScanResult): number {
   if (r.summary.counts.critical > 0) return 2;
