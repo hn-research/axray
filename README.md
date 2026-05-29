@@ -6,6 +6,8 @@
 npx ax-ray
 ```
 
+![ax-ray demo](./docs/launch.gif)
+
 `ax-ray` discovers the MCP servers and agent-client capability surfaces
 configured on your machine — Claude Desktop (legacy + DXT extensions),
 Cursor, Claude Code, Cline, Continue — introspects them **read-only**,
