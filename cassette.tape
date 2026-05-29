@@ -1,26 +1,30 @@
 # VHS cassette — the ax-ray launch GIF.
 #
 # Usage:
-#   brew install vhs                  # one-time
-#   npm run build                     # produce dist/ for the local "ax-ray" alias below
-#   vhs cassette.tape                 # produces launch.gif in the repo root
+#   brew install vhs
+#   npm run build                 # ensures dist/ exists for the local alias
+#   vhs cassette.tape             # produces launch.gif (and launch.mp4) at the repo root
 #
-# The recording runs the dual-surfaced demo report (--demo --connect):
-# attestation band at the top, severity-grouped findings below, in one
-# screen. Remediation (--how-to-fix) is intentionally NOT in this GIF —
-# it's a second-step reveal worth its own asset.
+# Three-act tour of the synthetic demo surface:
+#   1. ax-ray --demo                     (default static report)
+#   2. ax-ray --demo --connect           (same, plus live deep-mode findings)
+#   3. ax-ray --demo --connect --how-to-fix
+#                                        (same, plus per-finding remediation
+#                                         including publisher-declared safer-mode hints)
+# No real machine state is touched (synthetic demo path).
 
 Output launch.gif
+Output launch.mp4
 
-Set FontSize 16
-Set Width 1400
-Set Height 920
-Set Padding 32
+Set FontSize 13
+Set Width 1500
+Set Height 2200
+Set Padding 28
 Set Theme "Catppuccin Mocha"
-Set TypingSpeed 40ms
+Set TypingSpeed 30ms
 
-# Pre-recording setup: alias `ax-ray` to the local built binary so the
-# command on screen reads cleanly without `npx`. Hidden from the viewer.
+# Hidden setup: alias `ax-ray` to the local built binary so the command
+# on screen reads cleanly without `npx`.
 Hide
 Type 'alias ax-ray="node ./dist/cli.js"'
 Enter
@@ -30,16 +34,28 @@ Enter
 Sleep 300ms
 Show
 
-# Title card — short, sets context.
-Type "# ax-ray — see what your AI agents can actually do."
-Sleep 1200ms
+# ── Act 1 — default static report ───────────────────────────────
+Type "ax-ray --demo"
+Sleep 500ms
+Enter
+Sleep 11s
+
+Type "clear"
 Enter
 Sleep 400ms
 
-# The headline command.
+# ── Act 2 — deep mode (--connect) adds D1/D2/D3 + P4 ────────────
 Type "ax-ray --demo --connect"
-Sleep 600ms
+Sleep 500ms
 Enter
+Sleep 13s
 
-# Pause on the rendered report so viewers can read it.
-Sleep 14s
+Type "clear"
+Enter
+Sleep 400ms
+
+# ── Act 3 — expanded remediation with publisher safer-mode hints ─
+Type "ax-ray --demo --connect --how-to-fix"
+Sleep 500ms
+Enter
+Sleep 17s
