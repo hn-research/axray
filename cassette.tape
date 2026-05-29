@@ -32,13 +32,13 @@ Show
 
 # Title card — short, sets context.
 Type "# ax-ray — see what your AI agents can actually do."
-Sleep 1200
+Sleep 1200ms
 Enter
-Sleep 400
+Sleep 400ms
 
 # The headline command.
 Type "ax-ray --demo --connect"
-Sleep 600
+Sleep 600ms
 Enter
 
 # Pause on the rendered report so viewers can read it.
