@@ -124,7 +124,7 @@ function renderTerminal(result: ScanResult): void {
   const coverageBar = bar(coverageScore, 18);
   const totalSubjects = Math.max(1, result.servers.length);
   console.log(
-    `  ${pc.bold("SAFETY")}   ${pad(riskScore, 3)} / 100  (${gradeColor(grade)(grade)})   ${riskBar}` +
+    `  ${pc.bold("TRUST")}    ${pad(riskScore, 3)} / 100  (${gradeColor(grade)(grade)})   ${riskBar}` +
       `     ${pc.bold("COVERAGE")} ${pad(coverageScore, 3)} / 100   ${attested} / ${totalSubjects} attested  ${coverageBar}`,
   );
   console.log("");
