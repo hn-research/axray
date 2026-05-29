@@ -4,13 +4,13 @@ Working checklist for the v0.1.0 launch.
 
 ## One-time prep
 
-- [x] GitHub repo: `unforge-io/axray` (under the `OpenProjects` team).
+- [x] GitHub repo: `hn-research/axray` (under the `OpenProjects` team).
 - [x] CI workflow at `.github/workflows/ci.yml` (lint + test + build on PRs).
 - [ ] Create an npm account (or `npm login`) with publish rights to `ax-ray`.
 - [ ] (Recommended) configure npm Trusted Publishing so the future `publish.yml`
       workflow can `npm publish --provenance --access public` without a token.
       Settings: npmjs.com → the `ax-ray` package → "Publishing access" →
-      Trusted publishers → add `unforge-io/axray` with workflow `publish.yml`.
+      Trusted publishers → add `hn-research/axray` with workflow `publish.yml`.
 
 ## Pre-publish verification
 
