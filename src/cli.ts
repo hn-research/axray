@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * `mcp-xray` CLI entry. Day-1 stub — wired up so `npm run dev` works
+ * `ax-ray` CLI entry. Day-1 stub — wired up so `npm run dev` works
  * the moment dependencies are installed; the actual command tree lands
  * in subsequent commits per SPEC.md §11 (Build plan).
  */
@@ -10,7 +10,7 @@ import { Command } from "commander";
 const program = new Command();
 
 program
-  .name("mcp-xray")
+  .name("ax-ray")
   .description(
     "See what your AI agents can actually do — and find MCP servers worth trusting.",
   )
@@ -22,7 +22,7 @@ program
   .option("--connect", "deep mode: launch stdio servers / connect to remote and introspect tools/list", false)
   .option("--json", "machine-readable output", false)
   .action((_opts) => {
-    console.log("mcp-xray v0.0.0 — not implemented yet. See SPEC.md.");
+    console.log("ax-ray v0.0.0 — not implemented yet. See SPEC.md.");
     process.exit(0);
   });
 

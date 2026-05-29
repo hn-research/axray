@@ -1,12 +1,12 @@
-# `mcp-xray`
+# `ax-ray`
 
 > **See what your AI agents can actually do — and find the MCP servers worth trusting.**
 
 ```sh
-npx mcp-xray
+npx ax-ray
 ```
 
-`mcp-xray` discovers the MCP servers configured for your agent clients
+`ax-ray` discovers the MCP servers configured for your agent clients
 (Claude Desktop, Cursor, Claude Code), introspects their tools
 **read-only**, and shows you the real picture — both what's risky on
 your machine *and* what's well-attested.

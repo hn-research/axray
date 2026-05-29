@@ -1,6 +1,6 @@
-# `mcp-xray` — v0.1 spec
+# `ax-ray` — v0.1 spec
 
-> CLI binary: **`mcp-xray`** (run via `npx mcp-xray`). Standalone, ships
+> CLI binary: **`ax-ray`** (run via `npx ax-ray`). Standalone, ships
 > on its own. The umbrella brand for the upcoming registry / insights
 > site is deferred — picked when the site actually needs a URL.
 > Sibling deliverables (later, sharing this engine): BigQuery indexer +
@@ -8,7 +8,7 @@
 
 ## 0. Tagline & dual surface
 
-> **`npx mcp-xray` — see what your AI agents can actually do, and find the
+> **`npx ax-ray` — see what your AI agents can actually do, and find the
 > servers worth trusting.**
 
 The scanner is intentionally **dual-surfaced**:
@@ -41,7 +41,7 @@ each claim is in:
 | **3 Publisher-attested** *(future)* | publisher signs an `mcp-security.json`, identity bound to DNS or GitHub OIDC | **Yes** — long-game upgrade tier |
 | **4 Continuously verified** *(future)* | manifest + observation matched over time, deltas tracked | Yes |
 
-**v0.1 of `mcp-xray` operates entirely on Tier-1/2.** No publisher
+**v0.1 of `ax-ray` operates entirely on Tier-1/2.** No publisher
 cooperation is required. The output text reflects the tier honestly —
 e.g. *"Grade A · observed clean · 12k weekly users (npm) · source repo
 verified"* — never *"verified publisher."*
@@ -190,7 +190,7 @@ report; no opinion required. (Trust = reproducibility.)
 One screen. Color via `picocolors`. Boxed header.
 
 ```
-  mcp-xray  v0.1   ·   2 clients · 5 servers · 37 tools   ·   18.4s   ·   mode: deep
+  ax-ray  v0.1   ·   2 clients · 5 servers · 37 tools   ·   18.4s   ·   mode: deep
   RISK 34 / 100  ( D )    ▓▓▓▓▓░░░░░░░░░░░     COVERAGE  47 / 100   12 / 37 tools well-attested
 
   ── OK / ATTESTED ───────────────────────────────────────────────────
@@ -210,7 +210,7 @@ One screen. Color via `picocolors`. Boxed header.
   Tier of evidence:  Tier-1 (3 servers) · Tier-2 (2 servers) · Tier-3 (0)
   No publisher manifests resolved yet — this is normal in v0.1.
 
-  Next:  npx mcp-xray fix --interactive   ·   --json
+  Next:  npx ax-ray fix --interactive   ·   --json
   Want to enforce this across your team? → auth51 control plane
 ```
 
@@ -274,14 +274,14 @@ S6 check is the only place v0.1 references this file**, as an *info-level
 
 ## 9. Packaging, distribution, and the trust posture
 
-- **TypeScript → npm package `mcp-xray`**, run via `npx mcp-xray`.
+- **TypeScript → npm package `ax-ray`**, run via `npx ax-ray`.
 - Deps: `@modelcontextprotocol/sdk`, `commander`, `picocolors`,
   `boxen`, `zod` (schema validation).
 - Node ≥ 20 (for built-in fetch + ESM).
 - **No telemetry by default.** Optional `--submit` *(deferred from v0.1)*
   for anonymized findings to seed the registry. Consent banner.
 - **Apache-2.0, open source.** Read-only, local, reproducible scoring,
-  open methodology. Those four properties are why `npx mcp-xray` is a
+  open methodology. Those four properties are why `npx ax-ray` is a
   zero-hesitation action.
 
 ## 10. v0.1 cut lines
