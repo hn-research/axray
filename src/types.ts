@@ -106,7 +106,7 @@ export interface ScanResult {
   summary: ScanSummary;
 }
 
-/** Per-server enrichments from external sources (npm today; GitHub later). */
+/** Per-server enrichments from external sources. */
 export interface ServerEnrichment {
   server: string;
   npm?: {
@@ -115,6 +115,7 @@ export interface ServerEnrichment {
     latest?: string;
     repository?: string;
     homepage?: string;
+    weeklyDownloads?: number;
   };
 }
 

@@ -1,15 +1,24 @@
 /**
- * npm-registry enrichment. v0.1 fetches the packument (name, versions,
- * latest tag, repo, homepage). Weekly downloads add Day 2 when P2
- * (adoption) needs them.
+ * npm-registry enrichment.
  *
- * Best-effort: any network/parse error yields `undefined`. The engine still
- * runs without enrichments (Tier-1 facts only).
+ * Two endpoints per package, fetched in parallel:
+ *   - registry.npmjs.org/<pkg>                       — packument (name,
+ *                                                     versions, latest,
+ *                                                     repo, homepage)
+ *   - api.npmjs.org/downloads/point/last-week/<pkg>  — weekly downloads
+ *
+ * Best-effort: any network/parse error yields `undefined` for that field;
+ * partial enrichments are returned. The engine still runs without
+ * enrichments (Tier-1 facts only).
+ *
+ * Packages are deduplicated across servers so a popular shared package is
+ * fetched at most once per scan.
  */
 
 import type { ServerEnrichment, ServerSpec } from "../types.js";
 
-const NPM_REGISTRY = "https://registry.npmjs.org";
+const REGISTRY = "https://registry.npmjs.org";
+const DOWNLOADS = "https://api.npmjs.org/downloads/point/last-week";
 
 interface RawPackument {
   name?: string;
@@ -19,12 +28,15 @@ interface RawPackument {
   homepage?: string;
 }
 
+interface RawDownloads {
+  downloads?: number;
+}
+
 export async function fetchNpmPackuments(
   servers: ServerSpec[],
   signal?: AbortSignal,
 ): Promise<Map<string, ServerEnrichment>> {
   const out = new Map<string, ServerEnrichment>();
-  // Dedupe by package name (multiple servers can share a package).
   const pending = new Map<string, Promise<ServerEnrichment["npm"] | undefined>>();
   for (const s of servers) {
     const pkg = s.packageHints?.npm;
@@ -44,27 +56,54 @@ async function fetchOne(
   pkg: string,
   signal?: AbortSignal,
 ): Promise<ServerEnrichment["npm"] | undefined> {
+  const [packument, weekly] = await Promise.all([
+    fetchPackument(pkg, signal),
+    fetchWeeklyDownloads(pkg, signal),
+  ]);
+  if (!packument && weekly === undefined) return undefined;
+  const npm: ServerEnrichment["npm"] = {
+    name: packument?.name ?? pkg,
+    versions: packument?.versions ? Object.keys(packument.versions) : [],
+  };
+  if (packument?.["dist-tags"]?.latest !== undefined) {
+    npm.latest = packument["dist-tags"].latest;
+  }
+  const repo =
+    typeof packument?.repository === "string"
+      ? packument.repository
+      : packument?.repository?.url;
+  if (repo !== undefined) npm.repository = repo;
+  if (packument?.homepage !== undefined) npm.homepage = packument.homepage;
+  if (weekly !== undefined) npm.weeklyDownloads = weekly;
+  return npm;
+}
+
+async function fetchPackument(
+  pkg: string,
+  signal?: AbortSignal,
+): Promise<RawPackument | undefined> {
   try {
-    // npm registry accepts both @scope/pkg and unscoped names unencoded.
     const init: RequestInit = { headers: { Accept: "application/json" } };
     if (signal) init.signal = signal;
-    const r = await fetch(`${NPM_REGISTRY}/${pkg}`, init);
+    const r = await fetch(`${REGISTRY}/${pkg}`, init);
     if (!r.ok) return undefined;
-    const body = (await r.json()) as RawPackument;
-    const repo =
-      typeof body.repository === "string"
-        ? body.repository
-        : body.repository?.url;
-    const npm: ServerEnrichment["npm"] = {
-      name: body.name ?? pkg,
-      versions: body.versions ? Object.keys(body.versions) : [],
-    };
-    if (body["dist-tags"]?.latest !== undefined) {
-      npm.latest = body["dist-tags"].latest;
-    }
-    if (repo !== undefined) npm.repository = repo;
-    if (body.homepage !== undefined) npm.homepage = body.homepage;
-    return npm;
+    return (await r.json()) as RawPackument;
+  } catch {
+    return undefined;
+  }
+}
+
+async function fetchWeeklyDownloads(
+  pkg: string,
+  signal?: AbortSignal,
+): Promise<number | undefined> {
+  try {
+    const init: RequestInit = { headers: { Accept: "application/json" } };
+    if (signal) init.signal = signal;
+    const r = await fetch(`${DOWNLOADS}/${pkg}`, init);
+    if (!r.ok) return undefined;
+    const body = (await r.json()) as RawDownloads;
+    return typeof body.downloads === "number" ? body.downloads : undefined;
   } catch {
     return undefined;
   }

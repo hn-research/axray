@@ -1,15 +1,14 @@
 /**
  * The reusable detection engine. Single public entry point: `analyze`.
  *
- * Two callers in the design:
+ * Two intended callers:
  *   - CLI: feeds locally-discovered servers + (deep mode) live tools/list.
- *   - BigQuery indexer (next): feeds parsed committed configs and NO tools.
+ *   - Ecosystem indexer: feeds parsed committed configs and NO tools.
  * Same engine, different caller.
  *
- * Day-1 status: contract + dispatcher only. The S- and D-checks land Day 2/3.
- * Result currently carries empty findings/flags; the scoring formula and
- * `ScanResult` shape are wired so callers can integrate before the checks
- * are filled in.
+ * Pure: all external lookups (npm, GitHub, etc.) are pre-fetched into
+ * `options.enrichments`. `analyze` itself does no I/O, so it's
+ * deterministic, fast, and testable without network.
  */
 
 import type {
@@ -22,6 +21,8 @@ import type {
   ToolInfo,
   TrustTier,
 } from "../types.js";
+import { runStaticChecks } from "../checks/static/index.js";
+import { runPositiveChecks } from "../checks/positive/index.js";
 import { computeSummary, toGrade } from "./scoring.js";
 
 export interface AnalyzeOptions {
@@ -34,30 +35,22 @@ export function analyze(
   options: AnalyzeOptions = {},
 ): ScanResult {
   const mode = toolsByServer ? "deep" : "static";
+  const ctx = options.enrichments
+    ? { enrichments: options.enrichments }
+    : {};
 
-  // TODO Day 2: run static checks S1–S6 (secrets, fs roots, dangerous launch,
-  //   supply-chain, insecure remote, missing manifest) → findings + P1–P5.
-  // TODO Day 3: run deep checks D1–D3 (tool poisoning, dangerous capability
-  //   surface, over-permissive inputs) against toolsByServer → findings + P4.
-  const findings: Finding[] = [];
-  const positiveFlags: PositiveFlag[] = [];
-
-  const trust: ServerTrust[] = servers.map((s) => {
-    const sFindings = findings.filter((f) => f.server === s.name);
-    const sFlags = positiveFlags.filter((p) => p.server === s.name);
-    const tier: TrustTier = pickTier(sFlags);
-    const grade = sFindings.length === 0 ? "C" : toGrade(scoreFromFindings(sFindings));
+  const rawTrust: ServerTrust[] = servers.map((s) => {
+    const findings = runStaticChecks(s, ctx);
+    const positiveFlags = runPositiveChecks(s, ctx);
     return {
       server: s.name,
-      tier,
-      grade,
-      positiveFlags: sFlags,
-      findings: sFindings,
+      tier: pickTier(positiveFlags),
+      grade: toGrade(scoreForServer(findings)),
+      positiveFlags,
+      findings,
     };
   });
-
-  // Acknowledge enrichments will be consumed by Day-2 positive-flag checks.
-  void options.enrichments;
+  const trust = dedupeFileLevelFindings(rawTrust);
 
   return {
     scannedAt: new Date().toISOString(),
@@ -68,13 +61,53 @@ export function analyze(
   };
 }
 
-/** Placeholder tier picker. Day 2 elevates to Tier-2 when P1∧P2 hold. */
+/**
+ * Tier elevation from observed signals. Tier-3 (publisher-attested)
+ * requires a signed manifest, which is a roadmap feature.
+ */
 function pickTier(flags: PositiveFlag[]): TrustTier {
-  if (flags.length === 0) return 1;
+  const has = (id: string) => flags.some((f) => f.id === id);
+  if (has("P1") && has("P2")) return 2;
   return 1;
 }
 
-function scoreFromFindings(findings: Finding[]): number {
+/**
+ * Per-server score uses the same weights as the aggregate, but without
+ * per-category caps — a single critical finding on one server should
+ * collapse that server's grade, even if the whole-machine score keeps
+ * its category cap.
+ */
+/**
+ * Some findings describe a property of the config FILE (e.g. world-
+ * readable perms) rather than the server. When N servers live in the
+ * same file, the same evidence repeats N times. We keep the first
+ * occurrence and drop the rest so the report reads cleanly.
+ *
+ * Heuristic: identical (id, evidence) tuple → duplicate. Per-server
+ * findings (e.g. S1 with a secret hit, S2 with a path arg) differ in
+ * evidence across servers, so they're preserved.
+ *
+ * Per-server grade is recomputed from the deduped finding set so a
+ * server that lost a finding to dedup grades accordingly.
+ */
+function dedupeFileLevelFindings(trust: ServerTrust[]): ServerTrust[] {
+  const seen = new Set<string>();
+  return trust.map((t) => {
+    const findings = t.findings.filter((f) => {
+      const sig = `${f.id}${f.evidence.join("")}`;
+      if (seen.has(sig)) return false;
+      seen.add(sig);
+      return true;
+    });
+    return {
+      ...t,
+      findings,
+      grade: toGrade(scoreForServer(findings)),
+    };
+  });
+}
+
+function scoreForServer(findings: Finding[]): number {
   let p = 0;
   for (const f of findings) {
     if (f.severity === "critical") p += 40;

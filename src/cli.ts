@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /**
- * ax-ray CLI. Day-1 wiring:
+ * ax-ray CLI.
  *
  *   discoverServers() → fetchEnrichments() → analyze() → terminal / --json
  *
- * Checks land Day 2/3 inside the engine; the CLI surface is stable from
- * Day 1 so we don't churn it later.
+ * The terminal renderer is dual-surfaced (positive ATTESTED block above
+ * SEVERITY-grouped findings) so the same scan reads as "discover what's
+ * good" + "see what's risky" in one screen.
  */
 
 import { Command } from "commander";
@@ -13,6 +14,7 @@ import pc from "picocolors";
 import { discoverServers } from "./discovery/index.js";
 import { fetchEnrichments } from "./enrichments/index.js";
 import { analyze } from "./engine/index.js";
+import type { Finding, PositiveFlag, ScanResult, ServerTrust } from "./types.js";
 
 const program = new Command();
 
@@ -27,7 +29,7 @@ interface ScanOpts {
   connect: boolean;
   json: boolean;
   project?: string;
-  enrich?: boolean; // --no-enrich sets this to false
+  enrich?: boolean;
 }
 
 program
@@ -35,7 +37,7 @@ program
   .description(
     "Scan local MCP configs (static by default; --connect for deep mode)",
   )
-  .option("--connect", "deep mode: introspect tools/list (Day 3)", false)
+  .option("--connect", "deep mode: introspect tools/list", false)
   .option("--json", "machine-readable output", false)
   .option(
     "--project <path>",
@@ -74,20 +76,27 @@ program
 
     if (opts.json) {
       process.stdout.write(JSON.stringify(result, null, 2) + "\n");
-      process.exit(0);
+      process.exit(exitCodeFor(result));
     }
 
-    renderTerminal(result, enrichments);
-    process.exit(0);
+    renderTerminal(result);
+    process.exit(exitCodeFor(result));
   });
 
-function renderTerminal(
-  result: ReturnType<typeof analyze>,
-  enrichments: Awaited<ReturnType<typeof fetchEnrichments>> | undefined,
-): void {
+function exitCodeFor(r: ScanResult): number {
+  if (r.summary.counts.critical > 0) return 2;
+  if (r.summary.counts.high > 0) return 1;
+  return 0;
+}
+
+function renderTerminal(result: ScanResult): void {
   const byClient = new Map<string, number>();
   for (const s of result.servers)
     byClient.set(s.source, (byClient.get(s.source) ?? 0) + 1);
+
+  const { riskScore, coverageScore, grade, counts } = result.summary;
+  const totalTools = 0; // populated in deep mode
+  const attested = result.trust.filter((t) => t.tier >= 2).length;
 
   console.log("");
   console.log(
@@ -95,41 +104,97 @@ function renderTerminal(
       `· ${result.servers.length} server${result.servers.length === 1 ? "" : "s"} across ${byClient.size} client${byClient.size === 1 ? "" : "s"} · mode: ${result.mode}`,
     )}`,
   );
+  const riskBar = bar(riskScore, 18);
+  const coverageBar = bar(coverageScore, 18);
+  console.log(
+    `  ${pc.bold("RISK")}     ${pad(riskScore, 3)} / 100  (${gradeColor(grade)(grade)})   ${riskBar}` +
+      `     ${pc.bold("COVERAGE")} ${pad(coverageScore, 3)} / 100   ${attested} / ${result.servers.length} attested  ${coverageBar}`,
+  );
   console.log("");
 
-  for (const s of result.servers) {
-    const transport = pc.dim(`[${s.transport.padEnd(5)}]`);
-    const enr = enrichments?.get(s.name)?.npm;
-    const tail = enr
-      ? pc.dim(
-          `  ${enr.name}${enr.latest ? "@" + enr.latest : ""}${enr.repository ? "  ·  " + cleanRepo(enr.repository) : ""}`,
-        )
-      : "";
-    const sourceLabel = s.scope ? `${s.source} · ${shortenPath(s.scope)}` : s.source;
-    console.log(
-      `  ${transport}  ${pc.bold(s.name.padEnd(20))}  ${pc.dim(`(${sourceLabel})`)}${tail}`,
-    );
+  const positiveServers = result.trust.filter(
+    (t) => t.positiveFlags.length > 0 && t.findings.every((f) => f.severity === "info"),
+  );
+  if (positiveServers.length > 0) {
+    console.log(`  ${pc.green("OK / ATTESTED")}`);
+    for (const t of positiveServers) {
+      console.log(
+        `    ${pc.green("✓")}  ${pc.bold(t.server.padEnd(22))}  ${flagLine(t.positiveFlags)}`,
+      );
+    }
+    console.log("");
   }
-  console.log("");
+
+  for (const sev of ["critical", "high", "medium", "low", "info"] as const) {
+    const rows = result.trust.flatMap((t) =>
+      t.findings
+        .filter((f) => f.severity === sev)
+        .map((f) => ({ trust: t, finding: f })),
+    );
+    if (rows.length === 0) continue;
+    console.log(`  ${sevHeader(sev)}`);
+    for (const { trust, finding } of rows) {
+      console.log(
+        `    ${sevIcon(sev)}  ${pc.bold(trust.server)}${finding.subject ? pc.dim(" › ") + finding.subject : ""}  ${pc.dim(`[${finding.id}]`)}`,
+      );
+      console.log(`        ${finding.title}`);
+      for (const e of finding.evidence) {
+        console.log(`        ${pc.dim("·")} ${pc.dim(e)}`);
+      }
+      console.log(`        ${pc.dim("→")} ${pc.dim(finding.remediation)}`);
+    }
+    console.log("");
+  }
+
   console.log(
     pc.dim(
-      "  Day-1 build: discovery only. Checks (S1–S6, D1–D3) land Day 2/3.",
+      `  ${counts.critical} crit · ${counts.high} high · ${counts.medium} med · ${counts.low} low · ${counts.info} info`,
     ),
   );
   console.log("");
+  // Suppress unused-var warning until deep mode populates per-tool counts.
+  void totalTools;
 }
 
-function shortenPath(p: string): string {
-  const home = process.env["HOME"];
-  if (home && p.startsWith(home)) return "~" + p.slice(home.length);
-  return p;
+function flagLine(flags: PositiveFlag[]): string {
+  return flags
+    .map((f) => pc.dim(`${f.id} ${f.label}`))
+    .join(pc.dim("  ·  "));
 }
 
-function cleanRepo(url: string): string {
-  return url
-    .replace(/^git\+/, "")
-    .replace(/\.git$/, "")
-    .replace(/^https?:\/\//, "");
+function sevHeader(s: Finding["severity"]): string {
+  if (s === "critical") return pc.bold(pc.red("CRITICAL"));
+  if (s === "high") return pc.bold(pc.yellow("HIGH"));
+  if (s === "medium") return pc.bold(pc.magenta("MEDIUM"));
+  if (s === "low") return pc.dim(pc.bold("LOW"));
+  return pc.dim("INFO");
+}
+
+function sevIcon(s: Finding["severity"]): string {
+  if (s === "critical") return pc.red("✗");
+  if (s === "high") return pc.yellow("✗");
+  if (s === "medium") return pc.magenta("⚠");
+  if (s === "low") return pc.dim("·");
+  return pc.dim("ℹ");
+}
+
+function gradeColor(g: ServerTrust["grade"]) {
+  if (g === "A") return pc.green;
+  if (g === "B") return pc.green;
+  if (g === "C") return pc.yellow;
+  if (g === "D") return pc.red;
+  return pc.red;
+}
+
+function bar(score: number, width: number): string {
+  const filled = Math.round((score / 100) * width);
+  const head = "▓".repeat(Math.max(0, Math.min(width, filled)));
+  const tail = "░".repeat(Math.max(0, width - head.length));
+  return pc.dim(head + tail);
+}
+
+function pad(n: number, w: number): string {
+  return String(n).padStart(w, " ");
 }
 
 program.parseAsync(process.argv);
