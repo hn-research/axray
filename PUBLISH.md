@@ -4,14 +4,13 @@ Working checklist for the v0.1.0 launch.
 
 ## One-time prep
 
-- [ ] Create a GitHub repo for `ax-ray` and decide the org / user. Default below is `<your-github-org>`.
-- [ ] Replace `REPLACE_BEFORE_PUBLISH` with that org / user in:
-      - `package.json` (`repository.url`, `bugs.url`, `homepage`)
-      - `src/cli.ts` (two strings, in `renderDebug` and `renderCoverage`)
-      - `README.md` (any github.com references — sweep with `grep -rn REPLACE_BEFORE_PUBLISH`).
-- [ ] Add a GitHub `Actions` workflow that runs `npm test` on PRs (low priority for launch; can fast-follow).
-- [ ] Create an npm account (or `npm login` with an existing one) with publish rights.
-- [ ] (Optional, recommended) reserve the `ax-ray` name on npm by publishing v0.0.1-pre right after creating the account.
+- [x] GitHub repo: `unforge-io/axray` (under the `OpenProjects` team).
+- [x] CI workflow at `.github/workflows/ci.yml` (lint + test + build on PRs).
+- [ ] Create an npm account (or `npm login`) with publish rights to `ax-ray`.
+- [ ] (Recommended) configure npm Trusted Publishing so the future `publish.yml`
+      workflow can `npm publish --provenance --access public` without a token.
+      Settings: npmjs.com → the `ax-ray` package → "Publishing access" →
+      Trusted publishers → add `unforge-io/axray` with workflow `publish.yml`.
 
 ## Pre-publish verification
 

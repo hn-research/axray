@@ -27,9 +27,9 @@
   ],
   "license": "Apache-2.0",
   "author": "Abhishek Goswami",
-  "repository": { "type": "git", "url": "git+https://github.com/REPLACE_BEFORE_PUBLISH/ax-ray.git" },
-  "bugs": { "url": "https://github.com/REPLACE_BEFORE_PUBLISH/ax-ray/issues" },
-  "homepage": "https://github.com/REPLACE_BEFORE_PUBLISH/ax-ray#readme",
+  "repository": { "type": "git", "url": "git+https://github.com/unforge-io/axray.git" },
+  "bugs": { "url": "https://github.com/unforge-io/axray/issues" },
+  "homepage": "https://github.com/unforge-io/axray#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "boxen": "^8.0.0",
