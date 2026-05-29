@@ -16,12 +16,14 @@ import { discoverCapabilities } from "./discovery/capabilities.js";
 import { fetchEnrichments } from "./enrichments/index.js";
 import { analyze } from "./engine/index.js";
 import { getDemoInputs } from "./demo.js";
+import { introspectServers } from "./introspect/index.js";
 import type {
   CapabilityTrust,
   Finding,
   PositiveFlag,
   ScanResult,
   ServerTrust,
+  ToolInfo,
 } from "./types.js";
 
 const program = new Command();
@@ -68,7 +70,16 @@ const CHECK_CATALOG: { group: string; items: [string, string][] }[] = [
       ["P1", "source repo resolves to a known forge"],
       ["P2", "broad adoption (npm weekly downloads band)"],
       ["P3", "version pinned in launch command + current"],
+      ["P4", "clean tool surface (deep mode — no D1/D2/D3 hits)"],
       ["P5", "filesystem scope narrow (not $HOME / system root)"],
+    ],
+  },
+  {
+    group: "Deep checks (require --connect)",
+    items: [
+      ["D1", "tool-description poisoning (exfil patterns, injection phrasing, hidden unicode)"],
+      ["D2", "dangerous capability surface (exec / fs-write / network / credential tools)"],
+      ["D3", "over-permissive tool inputs (unbounded command / sql / path strings)"],
     ],
   },
   {
@@ -98,7 +109,7 @@ program
   .description(
     "Scan local MCP configs (static by default; --connect for deep mode)",
   )
-  .option("--connect", "deep mode: introspect tools/list", false)
+  .option("--connect", "deep mode: open each MCP server and call tools/list (never tools/call)", false)
   .option("--json", "machine-readable output", false)
   .option(
     "--project <path>",
@@ -110,7 +121,8 @@ program
   .action(async (opts: ScanOpts) => {
     if (opts.demo) {
       const demo = getDemoInputs();
-      const result = analyze(demo.servers, undefined, {
+      const toolsByServer = opts.connect ? demo.toolsByServer : undefined;
+      const result = analyze(demo.servers, toolsByServer, {
         enrichments: demo.enrichments,
         capabilities: demo.capabilities,
       });
@@ -120,7 +132,9 @@ program
       }
       console.log("");
       console.log(
-        pc.dim("  [demo mode] · synthetic data; nothing on your machine was scanned."),
+        pc.dim(
+          `  [demo mode${opts.connect ? " · --connect" : ""}] · synthetic data; nothing on your machine was scanned.`,
+        ),
       );
       renderTerminal(result);
       if (opts.verbose) renderCoverage(result);
@@ -159,11 +173,43 @@ program
     const enrichments = opts.enrich !== false
       ? await fetchEnrichments(servers)
       : undefined;
-    const analyzeOpts: { enrichments?: typeof enrichments; capabilities: typeof capabilities } = {
-      capabilities,
-    };
+
+    let toolsByServer: Map<string, ToolInfo[]> | undefined;
+    let introspectFailures: Map<string, string> | undefined;
+    if (opts.connect && servers.length > 0) {
+      const stdioCount = servers.filter((s) => s.transport === "stdio").length;
+      if (!opts.json) {
+        console.log("");
+        console.log(
+          pc.yellow(
+            `  ⚠ deep mode: opening ${servers.length} MCP server${servers.length === 1 ? "" : "s"}` +
+              (stdioCount > 0 ? ` (${stdioCount} stdio — will spawn locally)` : "") +
+              ", calling tools/list only. up to 15s per server.",
+          ),
+        );
+      }
+      const introspect = await introspectServers(servers, {
+        timeoutMs: 15_000,
+        concurrency: 4,
+      });
+      toolsByServer = introspect.toolsByServer;
+      if (introspect.failures.size > 0) introspectFailures = introspect.failures;
+    }
+
+    const analyzeOpts: {
+      enrichments?: typeof enrichments;
+      capabilities: typeof capabilities;
+    } = { capabilities };
     if (enrichments) analyzeOpts.enrichments = enrichments;
-    const result = analyze(servers, undefined, analyzeOpts);
+    const result = analyze(servers, toolsByServer, analyzeOpts);
+
+    if (introspectFailures && !opts.json) {
+      console.log(
+        pc.dim(
+          `  ${introspectFailures.size} server${introspectFailures.size === 1 ? "" : "s"} failed to respond: ${[...introspectFailures.keys()].join(", ")}`,
+        ),
+      );
+    }
 
     if (opts.json) {
       process.stdout.write(JSON.stringify(result, null, 2) + "\n");

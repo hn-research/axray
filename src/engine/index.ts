@@ -37,6 +37,7 @@ import {
   runCapabilityChecks,
   runCapabilityPositive,
 } from "../checks/capability/index.js";
+import { runDeepChecks, runDeepPositive } from "../checks/deep/index.js";
 import { computeSummary, toGrade } from "./scoring.js";
 
 export interface AnalyzeOptions {
@@ -58,6 +59,11 @@ export function analyze(
   const rawTrust: ServerTrust[] = servers.map((s) => {
     const findings = runStaticChecks(s, ctx);
     const positiveFlags = runPositiveChecks(s, ctx);
+    const introspectedTools = toolsByServer?.get(s.name);
+    if (introspectedTools) {
+      findings.push(...runDeepChecks(s, introspectedTools, ctx));
+      positiveFlags.push(...runDeepPositive(s, introspectedTools, ctx));
+    }
     return {
       server: s.name,
       tier: pickServerTier(positiveFlags),
@@ -110,6 +116,9 @@ export function analyze(
  */
 function pickServerTier(flags: PositiveFlag[]): TrustTier {
   const has = (id: string) => flags.some((f) => f.id === id);
+  // Deep-mode elevation: a clean tool surface (P4) alongside attested
+  // identity (P1 ∧ P2) is meaningfully stronger than static alone.
+  if (has("P1") && has("P2") && has("P4")) return 2;
   if (has("P1") && has("P2")) return 2;
   return 1;
 }
