@@ -39,7 +39,57 @@ interface ScanOpts {
   project?: string;
   enrich?: boolean;
   demo: boolean;
+  verbose: boolean;
 }
+
+const CLIENT_MATRIX: { id: string; label: string }[] = [
+  { id: "claude-desktop", label: "Claude Desktop" },
+  { id: "cursor", label: "Cursor" },
+  { id: "claude-code", label: "Claude Code" },
+];
+
+const CHECK_CATALOG: { group: string; items: [string, string][] }[] = [
+  {
+    group: "MCP servers",
+    items: [
+      ["S1", "secrets in env/args · world-readable config file"],
+      ["S2", "over-broad filesystem root"],
+      ["S3", "dangerous launch (shells · sudo · docker host-mounts)"],
+      ["S4", "supply-chain risk (unpinned / non-registry source)"],
+      ["S5", "insecure remote (plaintext http · raw IP)"],
+      ["S6", "publisher security manifest absent"],
+    ],
+  },
+  {
+    group: "Positive flags (MCP)",
+    items: [
+      ["P1", "source repo resolves to a known forge"],
+      ["P2", "broad adoption (npm weekly downloads band)"],
+      ["P3", "version pinned in launch command + current"],
+      ["P5", "filesystem scope narrow (not $HOME / system root)"],
+    ],
+  },
+  {
+    group: "Agent client capabilities",
+    items: [
+      ["C1", "lifecycle hooks (PreToolUse / UserPromptSubmit / Stop / ...)"],
+      ["C2", "permissive tool allowlists (Bash / globs / Read(*))"],
+      ["C3", "broad additionalDirectories grants"],
+      ["C4", "project-shipped permissions or hooks"],
+      ["C5", "apiKeyHelper command visibility"],
+      ["C6", "enableAllProjectMcpServers auto-trust toggle"],
+      ["CC1", "agent instruction-file content (Cursor rules)"],
+      ["CC2", "inline API key in client settings (Cursor)"],
+    ],
+  },
+  {
+    group: "Positive flags (capabilities)",
+    items: [
+      ["CP1", "no hooks / no permission grants"],
+      ["CP2", "config file is owner-only (mode 6xx, no group/other read)"],
+    ],
+  },
+];
 
 program
   .command("scan", { isDefault: true })
@@ -54,6 +104,7 @@ program
   )
   .option("--no-enrich", "skip npm/registry enrichments")
   .option("--demo", "run against a baked-in synthetic surface — no install, no network, no setup", false)
+  .option("-v, --verbose", "append a SCAN COVERAGE section showing what was looked at", false)
   .action(async (opts: ScanOpts) => {
     if (opts.demo) {
       const demo = getDemoInputs();
@@ -70,6 +121,7 @@ program
         pc.dim("  [demo mode] · synthetic data; nothing on your machine was scanned."),
       );
       renderTerminal(result);
+      if (opts.verbose) renderCoverage(result);
       process.exit(exitCodeFor(result));
     }
 
@@ -117,6 +169,7 @@ program
     }
 
     renderTerminal(result);
+    if (opts.verbose) renderCoverage(result);
     process.exit(exitCodeFor(result));
   });
 
@@ -220,6 +273,42 @@ function renderTerminal(result: ScanResult): void {
 
 function subjectLabel(c: CapabilityTrust): string {
   return `${c.client}:${c.scope}`;
+}
+
+function renderCoverage(result: ScanResult): void {
+  console.log("  " + pc.dim("─".repeat(60)));
+  console.log("  " + pc.bold("SCAN COVERAGE") + pc.dim("    what was looked at, regardless of findings"));
+  console.log("");
+
+  // Clients matrix — which were searched, whether anything was found.
+  console.log("  " + pc.dim("CLIENTS"));
+  const presence = new Set<string>();
+  for (const s of result.servers) presence.add(s.source);
+  for (const c of result.capabilities) presence.add(c.client);
+  for (const row of CLIENT_MATRIX) {
+    const found = presence.has(row.id);
+    const mark = found ? pc.green("✓") : pc.dim("·");
+    const label = row.label.padEnd(20);
+    const status = found ? pc.dim("found") : pc.dim("not present");
+    console.log(`    ${mark}  ${label}  ${status}`);
+  }
+  console.log("");
+
+  // Check catalog — every check ax-ray runs.
+  for (const block of CHECK_CATALOG) {
+    console.log("  " + pc.dim(block.group.toUpperCase()));
+    for (const [id, desc] of block.items) {
+      console.log(`    ${pc.dim("·")}  ${pc.dim(id.padEnd(4))} ${pc.dim(desc)}`);
+    }
+    console.log("");
+  }
+
+  console.log(
+    pc.dim(
+      "  Methodology: open at github.com/REPLACE/ax-ray/blob/main/SPEC.md",
+    ),
+  );
+  console.log("");
 }
 
 function shortenPath(p: string): string {
