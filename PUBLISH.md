@@ -1,66 +1,85 @@
 # Publishing ax-ray to npm
 
-Working checklist for the v0.1.0 launch.
+CI-driven publish with provenance attestation. Tag a version, push the tag, the workflow publishes.
 
-## One-time prep
+## One-time setup
 
-- [x] GitHub repo: `hn-research/axray` (under the `OpenProjects` team).
-- [x] CI workflow at `.github/workflows/ci.yml` (lint + test + build on PRs).
-- [ ] Create an npm account (or `npm login`) with publish rights to `ax-ray`.
-- [ ] (Recommended) configure npm Trusted Publishing so the future `publish.yml`
-      workflow can `npm publish --provenance --access public` without a token.
-      Settings: npmjs.com → the `ax-ray` package → "Publishing access" →
-      Trusted publishers → add `hn-research/axray` with workflow `publish.yml`.
+- [x] GitHub repo: `hn-research/axray`.
+- [x] `ci.yml` runs on PRs and main (lint + test + build).
+- [x] `publish.yml` runs on `v*` tag push (lint + test + build + `npm publish --provenance --access public`).
+- [ ] **Create an npm account** (or `npm login`) with publish rights to a name not yet taken on the registry.
+- [ ] **Create an Automation token** on npmjs.com:
+  - `https://www.npmjs.com/settings/<your-username>/tokens` → **Generate New Token** → **Granular Access Token** (or "Automation" type)
+  - Scope: read & write
+  - Packages: `ax-ray` (after first publish you can scope tighter; for the first publish leave it unscoped or use account-wide)
+  - Expiration: as long as you're comfortable (rotate later)
+- [ ] **Add it to the repo as a secret**:
+  - `https://github.com/hn-research/axray/settings/secrets/actions` → **New repository secret**
+  - Name: `NPM_TOKEN`
+  - Value: paste the token from the previous step
 
-## Pre-publish verification
+## Verifying the package name is still free
 
 ```sh
-npm run lint
-npm test
-npm run build
-npm pack --dry-run
+npm view ax-ray
+# If you see "404 Not Found" — it's free. Proceed.
+# If you see metadata — someone took it; rename in package.json.
 ```
 
-`npm pack --dry-run` prints the file list of what would be uploaded. Check that:
-
-- `dist/` is included (compiled output).
-- `README.md` and `LICENSE` are included.
-- `node_modules/`, `tests/`, `src/`, the `cassette.tape`, and CHANGELOG.md are EXCLUDED (the `files` field in package.json controls this; only `dist`, `README.md`, `LICENSE` ship).
-
-## Recording the launch GIF
+## Publishing v0.1.0
 
 ```sh
-brew install vhs
-vhs cassette.tape
-# produces launch.gif at the repo root
+cd /Users/ago/workspace/ax-ray
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
-Optionally also record a static-mode GIF (`ax-ray --demo`) for the README; the connect+how-to-fix version is the headline one.
+That pushes the tag, which triggers `publish.yml`. Open the Actions tab to watch it run; ~2 minutes to green.
 
-## Publish
+Once it's green, verify from a *fresh* shell (not the one you developed in):
 
 ```sh
-# Test publish to a private dist-tag first
-npm publish --dry-run
-
-# Real publish
-npm publish --access public
-
-# Verify the world can install it
 npx ax-ray --demo
+npx ax-ray --demo --connect --how-to-fix
 ```
 
-After the first publish, future releases:
+If those run cleanly against the synthetic surface, you're live.
+
+## What `--provenance` gives you
+
+After publish, the package page on npm (`https://www.npmjs.com/package/ax-ray`) shows a **"Provenance"** badge linking back to:
+- The exact git commit on `hn-research/axray` that built it
+- The GitHub Actions workflow run that ran the build
+- The integrity hash of the tarball
+
+Anyone consuming the package can verify the published bytes match the source commit. This is the package-side equivalent of the trust posture ax-ray itself enforces on MCP servers.
+
+## Releasing v0.1.1 (and later)
 
 ```sh
-# Bump version in package.json (and CHANGELOG.md)
-npm version patch       # or minor / major
-git push --tags
-npm publish
+# bump version in package.json + CHANGELOG.md entry
+npm version patch     # bumps to 0.1.1 and creates a v0.1.1 tag
+git push --follow-tags
 ```
 
-## Post-publish
+`--follow-tags` pushes the tag created by `npm version`. CI takes over.
 
-- [ ] Update `README.md` to drop the "v0.1, in active construction" status line.
-- [ ] Tweet / post the launch GIF + the npm link.
-- [ ] Drop the link into the IETF draft's Implementation Status section.
+## Migrating to npm Trusted Publishing (optional, later)
+
+Once `ax-ray` is on npm, you can swap NPM_TOKEN for OIDC trust:
+
+1. `https://www.npmjs.com/package/ax-ray/access` → **Trusted publishers** → Add publisher
+2. Source: GitHub
+3. Org/user: `hn-research`
+4. Repo: `axray`
+5. Workflow: `publish.yml`
+6. Optional: pin a default-branch environment
+
+After that, you can remove the `NPM_TOKEN` env from `publish.yml` and the `NPM_TOKEN` secret from the repo. Provenance still works (it's the OIDC path either way). Pure-OIDC publishing reduces the surface area of "what could leak."
+
+## Troubleshooting
+
+- **"You cannot publish over the previously published versions"** — bump the version in `package.json` before tagging.
+- **"403 Forbidden"** — the token doesn't have publish rights on this package, or it's been scoped to a different package name. Regenerate broader.
+- **"You do not have permission to publish 'ax-ray'"** — name is taken. Verify with `npm view ax-ray`.
+- **Provenance attestation step fails** — `id-token: write` is missing from the workflow permissions, or Node is older than 22.5. The workflow above has both right.
