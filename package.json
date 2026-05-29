@@ -14,7 +14,6 @@
   "keywords": ["mcp", "ai-agents", "security", "trust", "scanner", "agentic"],
   "license": "Apache-2.0",
   "author": "Abhishek Goswami",
-  "homepage": "https://glasshouse.dev",
   "repository": { "type": "git", "url": "git+https://github.com/REPLACE/mcp-xray.git" },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

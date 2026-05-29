@@ -1,7 +1,8 @@
 # `mcp-xray` — v0.1 spec
 
-> Working umbrella brand: **Glasshouse** — the open trust layer for MCP.
-> CLI binary: **`mcp-xray`** (run via `npx mcp-xray`).
+> CLI binary: **`mcp-xray`** (run via `npx mcp-xray`). Standalone, ships
+> on its own. The umbrella brand for the upcoming registry / insights
+> site is deferred — picked when the site actually needs a URL.
 > Sibling deliverables (later, sharing this engine): BigQuery indexer +
 > public **insights site** (BuiltWith-style, observational data only).
 
@@ -209,8 +210,8 @@ One screen. Color via `picocolors`. Boxed header.
   Tier of evidence:  Tier-1 (3 servers) · Tier-2 (2 servers) · Tier-3 (0)
   No publisher manifests resolved yet — this is normal in v0.1.
 
-  Next:  npx mcp-xray fix --interactive   ·   --json   ·   share at glasshouse.dev
-  Want to enforce this across your team? → glasshouse.dev/auth51
+  Next:  npx mcp-xray fix --interactive   ·   --json
+  Want to enforce this across your team? → auth51 control plane
 ```
 
 ### `--json` (feeds the registry & insights site)
@@ -239,7 +240,7 @@ One screen. Color via `picocolors`. Boxed header.
 }
 ```
 
-Opt-in `--submit` (later) sends an *anonymized* slice to the Glasshouse
+Opt-in `--submit` (later) sends an *anonymized* slice to the [umbrella-brand-TBD]
 registry — server fingerprints + findings + positive flags. Never user
 identifiers, never config contents, never tool inputs. Clear consent line.
 
@@ -267,7 +268,7 @@ Drafted as a separate document, not a v0.1 dependency. Reference shape:
 ```
 
 Trust anchored in DNS (`dns-txt` verification, à la ACME) + the
-publisher's own signature — Glasshouse mints nothing. **The scanner's
+publisher's own signature — [umbrella-brand-TBD] mints nothing. **The scanner's
 S6 check is the only place v0.1 references this file**, as an *info-level
 "future upgrade path"* note, never as a basis for any current grade.
 
@@ -297,7 +298,7 @@ S6 check is the only place v0.1 references this file**, as an *info-level
 
 **DEFERRED (post-launch, signal-gated)**
 - Windows path support · Windsurf / VS Code / Cline / Continue discovery.
-- `--submit` to the Glasshouse registry.
+- `--submit` to the [umbrella-brand-TBD] registry.
 - `--fix --interactive` remediation.
 - D4 (resource exposure), D5 (tool-name shadowing).
 - The canned hijack illustration ("see the attack").

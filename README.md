@@ -28,8 +28,9 @@ and the v0.1 build plan.
 
 ## Status
 
-v0.1, in active construction. Part of the [Glasshouse](https://glasshouse.dev)
-open trust layer for MCP.
+v0.1, in active construction. The CLI half of an open trust layer for
+MCP — the umbrella brand for the upcoming registry / insights site is
+TBD; the scanner stands on its own.
 
 ## License
 
