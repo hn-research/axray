@@ -103,7 +103,53 @@ export interface ScanResult {
   mode: "static" | "deep";
   servers: ServerSpec[];
   trust: ServerTrust[];
+  capabilities: ClientCapability[];
+  capabilityTrust: CapabilityTrust[];
   summary: ScanSummary;
+}
+
+/**
+ * Native (non-MCP) capability surface exposed by an agent client. The
+ * MCP block is one input to "what can my agent do"; the client's own
+ * permissions, hooks, and trust toggles are the other.
+ */
+export type AgentClient = "claude-code" | "cursor" | "claude-desktop";
+export type CapabilityScope = "global" | "project";
+
+export interface HookSpec {
+  event: string;
+  matcher?: string;
+  type: string;
+  command: string;
+  timeoutSeconds?: number;
+}
+
+export interface ClientCapability {
+  client: AgentClient;
+  scope: CapabilityScope;
+  configPath: string;
+  configPerms?: string;
+  projectRoot?: string;
+  hooks: HookSpec[];
+  permissions: {
+    allow: string[];
+    deny: string[];
+    additionalDirectories: string[];
+  };
+  apiKeyHelper?: string;
+  enableAllProjectMcpServers?: boolean;
+  enabledMcpjsonServers: string[];
+  disabledMcpjsonServers: string[];
+  extras: Record<string, unknown>;
+}
+
+export interface CapabilityTrust {
+  client: AgentClient;
+  scope: CapabilityScope;
+  configPath: string;
+  grade: Grade;
+  positiveFlags: PositiveFlag[];
+  findings: Finding[];
 }
 
 /** Per-server enrichments from external sources. */

@@ -2,16 +2,26 @@
  * The reusable detection engine. Single public entry point: `analyze`.
  *
  * Two intended callers:
- *   - CLI: feeds locally-discovered servers + (deep mode) live tools/list.
+ *   - CLI: feeds locally-discovered servers + capabilities + (deep
+ *     mode) live tools/list.
  *   - Ecosystem indexer: feeds parsed committed configs and NO tools.
  * Same engine, different caller.
  *
  * Pure: all external lookups (npm, GitHub, etc.) are pre-fetched into
  * `options.enrichments`. `analyze` itself does no I/O, so it's
  * deterministic, fast, and testable without network.
+ *
+ * The engine surfaces two distinct subject kinds:
+ *   - MCP servers: `ServerSpec[]` → `ServerTrust[]`
+ *   - Native client capability records: `ClientCapability[]` →
+ *     `CapabilityTrust[]`
+ * They share the same Finding / PositiveFlag types so the report and
+ * scoring don't need to special-case.
  */
 
 import type {
+  ClientCapability,
+  CapabilityTrust,
   Enrichments,
   Finding,
   PositiveFlag,
@@ -23,10 +33,15 @@ import type {
 } from "../types.js";
 import { runStaticChecks } from "../checks/static/index.js";
 import { runPositiveChecks } from "../checks/positive/index.js";
+import {
+  runCapabilityChecks,
+  runCapabilityPositive,
+} from "../checks/capability/index.js";
 import { computeSummary, toGrade } from "./scoring.js";
 
 export interface AnalyzeOptions {
   enrichments?: Enrichments;
+  capabilities?: ClientCapability[];
 }
 
 export function analyze(
@@ -38,18 +53,44 @@ export function analyze(
   const ctx = options.enrichments
     ? { enrichments: options.enrichments }
     : {};
+  const capabilities = options.capabilities ?? [];
 
   const rawTrust: ServerTrust[] = servers.map((s) => {
     const findings = runStaticChecks(s, ctx);
     const positiveFlags = runPositiveChecks(s, ctx);
     return {
       server: s.name,
-      tier: pickTier(positiveFlags),
-      grade: toGrade(scoreForServer(findings)),
+      tier: pickServerTier(positiveFlags),
+      grade: toGrade(scoreForFindings(findings)),
       positiveFlags,
       findings,
     };
   });
+
+  const capabilityTrust: CapabilityTrust[] = capabilities.map((cap) => {
+    const findings = runCapabilityChecks(cap, ctx);
+    const positiveFlags = runCapabilityPositive(cap, ctx);
+    return {
+      client: cap.client,
+      scope: cap.scope,
+      configPath: cap.configPath,
+      grade: toGrade(scoreForFindings(findings)),
+      positiveFlags,
+      findings,
+    };
+  });
+
+  const allTrustForSummary = [
+    ...rawTrust,
+    ...capabilityTrust.map((c) => ({
+      server: c.configPath,
+      tier: 1 as TrustTier,
+      grade: c.grade,
+      positiveFlags: c.positiveFlags,
+      findings: c.findings,
+    })),
+  ];
+
   const trust = dedupeFileLevelFindings(rawTrust);
 
   return {
@@ -57,35 +98,27 @@ export function analyze(
     mode,
     servers,
     trust,
-    summary: computeSummary(trust),
+    capabilities,
+    capabilityTrust,
+    summary: computeSummary(allTrustForSummary),
   };
 }
 
 /**
- * Tier elevation from observed signals. Tier-3 (publisher-attested)
- * requires a signed manifest, which is a roadmap feature.
+ * Server tier elevation. Tier-3 (publisher-attested) requires a signed
+ * manifest, which is a roadmap feature.
  */
-function pickTier(flags: PositiveFlag[]): TrustTier {
+function pickServerTier(flags: PositiveFlag[]): TrustTier {
   const has = (id: string) => flags.some((f) => f.id === id);
   if (has("P1") && has("P2")) return 2;
   return 1;
 }
 
 /**
- * Per-server score uses the same weights as the aggregate, but without
- * per-category caps — a single critical finding on one server should
- * collapse that server's grade, even if the whole-machine score keeps
- * its category cap.
- */
-/**
- * Some findings describe a property of the config FILE (e.g. world-
- * readable perms) rather than the server. When N servers live in the
- * same file, the same evidence repeats N times. We keep the first
- * occurrence and drop the rest so the report reads cleanly.
- *
- * Heuristic: identical (id, evidence) tuple → duplicate. Per-server
- * findings (e.g. S1 with a secret hit, S2 with a path arg) differ in
- * evidence across servers, so they're preserved.
+ * Some findings describe a property of a config FILE (e.g. world-
+ * readable perms) rather than the subject that triggered them. When N
+ * servers live in the same file, identical evidence repeats. We keep
+ * the first occurrence and drop the rest so the report reads cleanly.
  *
  * Per-server grade is recomputed from the deduped finding set so a
  * server that lost a finding to dedup grades accordingly.
@@ -94,7 +127,7 @@ function dedupeFileLevelFindings(trust: ServerTrust[]): ServerTrust[] {
   const seen = new Set<string>();
   return trust.map((t) => {
     const findings = t.findings.filter((f) => {
-      const sig = `${f.id}${f.evidence.join("")}`;
+      const sig = `${f.id}${f.evidence.join("")}`;
       if (seen.has(sig)) return false;
       seen.add(sig);
       return true;
@@ -102,12 +135,18 @@ function dedupeFileLevelFindings(trust: ServerTrust[]): ServerTrust[] {
     return {
       ...t,
       findings,
-      grade: toGrade(scoreForServer(findings)),
+      grade: toGrade(scoreForFindings(findings)),
     };
   });
 }
 
-function scoreForServer(findings: Finding[]): number {
+/**
+ * Per-subject score uses the same weights as the aggregate, but without
+ * per-category caps — a single critical finding on one subject should
+ * collapse that subject's grade even if the whole-machine score keeps
+ * its category cap.
+ */
+function scoreForFindings(findings: Finding[]): number {
   let p = 0;
   for (const f of findings) {
     if (f.severity === "critical") p += 40;
