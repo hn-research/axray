@@ -19,8 +19,12 @@ Set Padding 28
 Set Theme "Catppuccin Mocha"
 Set TypingSpeed 35ms
 
-# Hidden setup: alias the local built binary so the typed command stays clean.
+# Hidden setup: alias the local binary, and FORCE_COLOR so picocolors
+# emits ANSI escapes even when piped (which `less -R` will then render).
 Hide
+Type 'export FORCE_COLOR=1'
+Enter
+Sleep 200ms
 Type 'alias ax-ray="node ./dist/cli.js"'
 Enter
 Sleep 300ms
